@@ -1,0 +1,67 @@
+
+Electrum.pm,50
+package Bitcoin::Electrum;Bitcoin::Electrum2,19
+
+Address.pm,339
+package Bitcoin::Address;Bitcoin::Address2,19
+sub new {new12,191
+sub size { 160 }size36,1101
+sub default_version { 0 }default_version37,1118
+sub version {version39,1145
+sub value {value44,1260
+sub checksum {checksum50,1397
+sub _hash_from_PEM {_hash_from_PEM57,1579
+sub toBase58 {toBase5870,1873
+sub toHex {toHex76,2025
+
+Wallet.pm,75
+package Bitcoin::Wallet;Bitcoin::Wallet2,19
+sub TIEHASH {TIEHASH14,168
+
+Electrum/Wallet.pm,480
+package Bitcoin::Electrum::Wallet;Bitcoin::Electrum::Wallet2,19
+use constant VERSION => 2;VERSION18,359
+use constant TEMPLATE => {TEMPLATE19,386
+sub passwdToCipher {passwdToCipher30,721
+sub new_seed {new_seed35,835
+sub wallet_dir {wallet_dir42,1014
+sub create_new_address {create_new_address52,1370
+sub recover {recover93,2671
+sub save {save99,2766
+sub is_mine {is_mine105,2912
+sub is_change {is_change110,3047
+sub get_new_address {get_new_address116,3200
+
+Electrum/Client/GUI/GTK.pm,86
+package Bitcoin::Electrum::Client::GUI::GTK;Bitcoin::Electrum::Client::GUI::GTK2,19
+
+Electrum/Client/GUI.pm,76
+package Bitcoin::Electrum::Client::GUI;Bitcoin::Electrum::Client::GUI2,19
+
+Electrum/Mnemonic.pm,124
+package Bitcoin::Electrum::Mnemonic;Bitcoin::Electrum::Mnemonic2,16
+sub encode {encode10,189
+sub decode {decode22,451
+
+Electrum/Client.pm,279
+package Bitcoin::Electrum::Client;Bitcoin::Electrum::Client9,247
+sub PrivKeyToSecret { return substr shift, 9, 32 }PrivKeyToSecret42,838
+sub int_to_hex {int_to_hex43,889
+sub filter { join '', map { s/.*\t//r } split "\n", shift }filter50,1028
+sub raw_tx {raw_tx52,1089
+
+PrivateKey.pm,357
+package Bitcoin::PrivateKey;Bitcoin::PrivateKey2,16
+use constant DUMMY_PASSWD => 'dummy password';DUMMY_PASSWD11,173
+sub size { 256 }size13,221
+sub default_version { 128 }default_version14,238
+sub _hash_from_PEM {_hash_from_PEM16,267
+sub toWIF {toWIF26,486
+sub encrypt {encrypt32,601
+sub decrypt {decrypt41,919
+sub address {address51,1213
+
+Base58.pm,226
+package Bitcoin::Base58;Bitcoin::Base583,58
+sub decode { shift =~ m/.$/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }decode18,280
+sub encode { my $x = shift; encode($x/58) . (BASE58)[$x%58] if $x > 0 } encode19,359

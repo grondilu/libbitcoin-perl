@@ -1,0 +1,13 @@
+
+=head1 AUTHOR
+
+L Grondin <grondilu@yahoo.fr>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2011, Lucien Grondin.  All rights reserved.  
+
+This library is free software; you can redistribute it and/or modify it under 
+the same terms as Perl itself (L<perlgpl>, L<perlartistic>).
+
+=cut
