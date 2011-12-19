@@ -6,11 +6,12 @@ BEGIN { plan tests => 10 }
 use Bitcoin::PrivateKey;
 use Bitcoin::Address;
 
-srand 31442;
 my $key = new Bitcoin::PrivateKey;
-
 ok( $$key, Bitcoin::PrivateKey->new($$key)->toBase58 );
 
+my @mnemonic = $key->mnemonic;
+
+ok( $$key, Bitcoin::PrivateKey->new(@mnemonic)->toBase58 );
 
 my $before = $$key;
 my $after = $key->encrypt('pass');

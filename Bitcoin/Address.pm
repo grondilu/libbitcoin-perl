@@ -9,6 +9,11 @@ use Bitcoin;
 use Bitcoin::Base58 qw(encode decode);
 use Digest::SHA qw(sha256);
 
+sub size { 160 }
+sub default_version { 0 }
+
+our $version;
+
 sub new {
     my $class = shift;
     die "instance method call not implemented" if ref $class;
@@ -33,12 +38,9 @@ sub new {
     else						{ die "wrong argument format ($_)" }
 }
 
-sub size { 160 }
-sub default_version { 0 }
-
 sub version {
     my $_ = shift;
-    return ref($_) ? decode($$_) / 256**4 / 2**$_->size : $_->default_version;
+    return ref($_) ? decode($$_) / 256**4 / 2**$_->size : $version // $_->default_version;
 }
 
 sub value {

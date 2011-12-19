@@ -8,17 +8,14 @@ require Exporter;
 use strict;
 use warnings;
 
-use integer;
 use bigint;
 
 use Bitcoin qw(BASE58);
 
 my %b58; $b58{(BASE58)[$_]} = $_ for 0 .. 57;
 
-my $i = 0;
-
 sub decode { shift =~ m/.$/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }
-sub encode { my $x = shift; encode($x/58) . (BASE58)[$x%58] if $x > 0 } 
+sub encode { my $x = shift; return encode($x/58) . (BASE58)[$x%58] if $x > 0 } 
 
 1;
 

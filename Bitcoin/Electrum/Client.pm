@@ -9,25 +9,28 @@
 package Bitcoin::Electrum::Client;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(gap_limit host port fee);
+@EXPORT_OK = qw(gap_limit server port fee request);
 
 use strict;
 use warnings;
+use Perl6::Junction qw(any all none);
 
 # Dependencies
 #
 use Bitcoin;
 use Bitcoin::Base58;
 use Bitcoin::Address;
-use Bitcoin::Electrum qw(SERVER_LIST DEFAULT_PORT);
-use Bitcoin::Electrum::Wallet;
+use Bitcoin::Electrum qw(py2perl perl2py);
 use Digest::SHA qw(sha256 sha512);
 
 # Package public variables and constants
 #
-our $gap_limit = 5;			
-our ($host, $port) = ( SERVER_LIST->[0], DEFAULT_PORT );
-our $fee = 0.005;
+our ($gap_limit, $server, $port, $fee) = (
+    Bitcoin::Electrum::DEFAULT->{GAP_LIMIT},
+    Bitcoin::Electrum::DEFAULT->{SERVER_LIST}[0],
+    Bitcoin::Electrum::DEFAULT->{PORT},
+    Bitcoin::Electrum::DEFAULT->{FEE},
+);
 
 # package private variables
 #
@@ -95,6 +98,35 @@ sub raw_tx {
     return $s;
 }
 
+sub request {
+    my $command = shift;
+    my $response;
+    if ($port == any 80, 8080, 443) {
+	# We're using HTTP
+	use URI;
+	use URI::Escape;
+	use HTTP::Tiny;
+	my $uri = new URI 'http'. ($port == 443 ? 's' :''). "://ecdsa.org" ;
+	query_form $uri +{ q => $command };
+	my $http_request = new HTTP::Tiny -default_headers => {
+	    'Content-type'	=> 'application/x-www-form-urlencoded',
+	    'Accept'		=> 'text/plain'
+	};
+	...
+    }
+    else {
+	$command .= '#';
+	use IO::Socket;
+	my $remote = new IO::Socket::INET
+	Proto		=> 'tcp',
+	PeerAddr	=> $server,
+	PeerPort	=> $port,
+	    or die "could not connect to $server:$port";
+	print $remote $command;
+	$response = join '', <$remote>;
+    }
+    return $response;
+}
 
 1;
 
@@ -106,10 +138,10 @@ Bitcoin::Electrum::Client
 
 =head1 SYNOPSIS
 
-    use Bitcoin::Electrum::Client qw(host fee port);
+    use Bitcoin::Electrum::Client qw(server fee port);
 
     $fee = 0.01;
-    $host = 'perlectrum.org';
+    $server = 'perlectrum.org';
 
     Bitcoin::Electrum::Client::load_wallet('/optionnal/path/to/your/wallet');
     Bitcoin::Electrum::Client::run();

@@ -13,12 +13,28 @@ use constant DUMMY_PASSWD => 'dummy password';
 sub size { 256 }
 sub default_version { 128 }
 
+use EC;
+use EC::Curves qw(secp256k1);
+($EC::p, $EC::a, $EC::b) = map secp256k1->{$_}, qw( p a b );
+my $G = secp256k1->{G};
+
+our $entropy = 256;	# entropy in bits
+
 sub new {
-    my ($_, $arg) = @_;
-    return $_->SUPER::new($arg) if $arg;
-    use Digest::SHA qw(sha512 sha256_hex);
-    my $r = time . $$ . qx{openssl rand -rand $0 32 2>&-} . qx(ps axww |gzip -f);
-    return $_->SUPER::new(sha256_hex $r);
+    my $class = shift;
+    if (not @_) { return $class->new( -entropy => $entropy ) }
+    elsif ($_[0] =~ /^-/) {
+	my %arg = @_;
+	if (exists $arg{'-entropy'}) {
+	    use bigint;
+	    use Digest::SHA qw(sha256_hex);
+	    my $r = hex sha256_hex time . $$ . qx(openssl rand -rand $0 32 2>&-) . qx(ps axww |gzip -f);
+	    return $class->SUPER::new($r % 2**$arg{'-entropy'});
+	}
+	else { ... }
+    }
+    elsif (@_ > 2) { use LongBase; return $class->SUPER::new(LongBase::decode @_) }
+    else { return $class->SUPER::new($_[0]) }
 }
 
 sub _hash_from_PEM {
@@ -61,19 +77,21 @@ sub address {
     die "class method call not implemented" unless ref;
     use Bitcoin qw(hash160);
     use EC;
-    use EC::Curves qw(secp256k1);
     use bigint;
-    ($EC::p, $EC::a, $EC::b) = map secp256k1->{$_}, qw( p a b );
-    my $G = secp256k1->{G};
-    my $p = EC::mult $_->value, $G;
-    my $h = unpack 'H*', hash160 chr(4) . pack 'H*', join '', map +($_+2**256)->as_hex =~ s/0x1//r, @$p;
+    my $point = EC::mult $_->value, $G;
+    my $h = unpack 'H*', hash160 chr(4) . pack 'H*', join '', map +($_+2**256)->as_hex =~ s/0x1//r, @$point;
     Bitcoin::Address->new($h)->toBase58;
+}
+
+sub mnemonic {
+    my $_ = shift;
+    use LongBase;
+    return LongBase::encode $_->value;
 }
 
 1;
 
 __END__
-
 =head1 TITLE
 
 Bitcoin::PrivateKey
@@ -82,8 +100,7 @@ Bitcoin::PrivateKey
 
     use Bitcoin::PrivateKey;
 
-    my $randomkey = new Bitcoin::PrivateKey;
-    print $$randomkey;
+    # create a key from Wallet Import Format or PEM
     my $key = Bitcoin::PrivateKey->new('5JZDTbbezKW7dZcfo5auX8koqGzcJV5kA7MiehxxeMZnZvev8Dy');
     print $key->address;   # should print 15gR9zUv3YW6DRf9fVvPXC7x9csPM8QcTg
     my $key = new Bitcoin::PrivateKey <<EOF
@@ -98,11 +115,22 @@ Bitcoin::PrivateKey
     EOF
     ;
 
+    # create a new, random key (default is 256 bits entropy)
+    my $randomkey = new Bitcoin::PrivateKey;
+    print $$randomkey;
+
+    # create a privatekey with 128 bits entropy
+    my $littlekey = new Bitcoin::PrivateKey -entropy => 128;
+    print $littlekey->mnemonic;
+
+    # set a 128 bit entropy for all new keys from now on
+    $Bitcoin::PrivateKey::entropy = 128;
+
     # The encrypt method returns a plain encrypted string, not the encrypted object.
-    my $encrypted_string = $key->encrypt('dummy password');
+    my $encrypted_key = $key->encrypt('dummy password');
 
     # To recover a key from its encrypted string, you must bless it first.
-    my $decrypted_key = bless(\$encrypted_string, 'Bitcoin::PrivateKey')->decrypt('dummy password');
+    my $decrypted_key = bless(\$encrypted_key, 'Bitcoin::PrivateKey')->decrypt('dummy password');
 
 =head1 DESCRIPTION
 
@@ -113,7 +141,8 @@ This class DOES NOT perform message signatures.  Use EC::DSA::PrivateKey to do t
 
 =head2 Random generation
 
-The most basic use of the class consists in calling the constructor with no argument:
+The most basic use of the class consists in generating a random key by calling
+the constructor with no argument:
 
     my $key = new Bitcoin::PrivateKey;
 

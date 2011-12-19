@@ -31,7 +31,6 @@ sub decode {
 	$out .= sprintf "%x", $x;
     }
     return $out;
-
 }
 
 1;

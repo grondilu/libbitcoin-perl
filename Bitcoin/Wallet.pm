@@ -6,20 +6,37 @@ require DB_File;
 use strict;
 use warnings;
 
-use DBM_Filter;
-use Digest::SHA qw(sha256);
-
+use Bitcoin::Address;
+use Bitcoin::PrivateKey;
 our $passwd;
 
-sub TIEHASH {
+sub FETCH {
     my $_ = shift;
-    $passwd = shift || 'dummy passwd';
-    my $obj = $_->SUPER::TIEHASH(@_);
-
-    return $obj;
+    my $addr = shift;
+    my $encrypted = bless \$_->SUPER::FETCH($addr), 'Bitcoin::PrivateKey';
+    return $encrypted->decrypt($passwd)->toBase58;
 }
 
+sub STORE {
+    my ($this, $key, $value) = @_;
+    my $pubkey = Bitcoin::Address->new($key);
+    my $privkey = Bitcoin::PrivateKey->new($value);
+    die "incompatible version numbers" if $privkey->version != 128 + $pubkey->version;
+    die "inconsistent entry:  key is not value's Bitcoin address" if $$pubkey ne $privkey->address;
+    return $this->SUPER::STORE($pubkey->toBase58, $privkey->encrypt($passwd));
+}
 
+sub add {
+    my $_ = shift;
+    die "class method call not implemented" unless ref;
+    my $arg = shift; 
+    if (ref($arg) eq 'Bitcoin::PrivateKey') {
+	my $address = $arg->address;
+	$_->SUPER::STORE($address, $arg->encrypt($passwd));
+	return $address;
+    }
+    else { $_->add(new Bitcoin::PrivateKey $arg) }
+}
 1;
 
 __END__
@@ -32,10 +49,17 @@ Bitcoin::Wallet
 
     use Bitcoin::Wallet;
 
-    my %wallet;
-    system('stty -echo'); chomp( my $password = <STDIN> );
-    tie %wallet, 'Bitcoin::Wallet', $password, '/path/to/my/wallet.bdb';
-    ...
+    $Bitcoin::Wallet::passwd = 'some password';
+
+    tie my %wallet, 'Bitcoin::Wallet', '/path/to/my/wallet';
+
+    $wallet{foo} = 'bar';  # dies immediately as none of this is bitcoin related
+
+    use Bitcoin::PrivateKey;
+    my $key = new Bitcoin::PrivateKey;
+    $wallet{$key->address} = $$key;
+    $wallet{1StupidFakeAddress31415z} = $$key;   # should die as the address is not valid;
+
     untie %wallet;
 
 =head1 DESCRIPTION
@@ -47,6 +71,11 @@ and prevents user from entering anything but valid keys in the database.
 
 Other data such as transaction history, blocks or contacts should
 be stored somewhere else.
+
+=head1 TODO
+
+The class can only store instances of Bitcoin::PrivateKey.  I would be better if it was
+more generic and could store any child class.
 
 =head1 AUTHOR
 

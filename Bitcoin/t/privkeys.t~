@@ -6,15 +6,17 @@ BEGIN { plan tests => 10 }
 use Bitcoin::PrivateKey;
 use Bitcoin::Address;
 
-srand 31442;
 my $key = new Bitcoin::PrivateKey;
-
 ok( $$key, Bitcoin::PrivateKey->new($$key)->toBase58 );
 
+die;
+my @mnemonic = $key->mnemonic;
+
+ok( $$key, Bitcoin::PrivateKey->new(@mnemonic)->toBase58 );
 
 my $before = $$key;
 my $after = $key->encrypt('pass');
-ok( bless(\$after, 'Bitcoin::PrivateKey')->decrypt('pass')->toBase58, $before );
+ok( bless(\$after, 'Bitcoin::PrivateKey')->decrypt('pass')->toBase58, $before, 'inconsistent encryption/decryption' );
 
 
 for (<DATA>) {
