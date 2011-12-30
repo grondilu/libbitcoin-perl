@@ -32,70 +32,61 @@ our ($gap_limit, $server, $port, $fee) = (
     Bitcoin::Electrum::DEFAULT->{FEE},
 );
 
-# package private variables
-#
-my $wallet;
-
-my $message = '';
-my $tx_history = {};
-my $rtime = 0;
-
 # subroutines
-
-sub PrivKeyToSecret { return substr shift, 9, 32 }
-sub int_to_hex {
-    use bigint;
-    my $i = shift;
-    my $len = shift || 64; # nibbles
-    $i += 16**$len;
-    $i->as_hex =~ s/0x1//r;
-}
-sub filter { join '', map { s/.*\t//r } split "\n", shift }
+#
 
 sub raw_tx {
     my ($input, $output) = @_;
     my $for_sig = shift;
 
-    my $s;
-    $s = sprintf "%s\t\t\t%8x\n".  "%s\t%x\n",
-    'version:',			1,
-    'number of inputs:',	scalar(@$input);
+    my @tx;
 
-    my $script;
-    my $i = 0;
-    for (@$input) {
-	my (%p, $pubkey, $sig);
-	($p{hash}, $p{index}, $p{script}, $pubkey, $sig) = @$_[2..6];
-	$sig .= chr(1);
-	$pubkey = chr(4) . $pubkey;
+    push @tx,
+    [ 'version',		sprintf '%8x', 1 ],
+    [ 'number of inputs',	sprintf '%8x', scalar @$input];
 
-	$script =
-	$for_sig && $for_sig == $i++ ? $p{script} :
-	!$for_sig ? sprintf '%2x%x'x 2 ."\n", map { length($_), $_ } $sig, $pubkey :
-	'';
+    for (my ($i, @input) = (0, @$input); $i < @$input; $i++) {
+	my ($phash, $pindex, $pscript, $pubkey, $sig) = @input[2..6];
 
-	$s .= sprintf "%s\t%x\n". "%s\t%8x\n". "%s\t%2x\n".  "%s\n". "%s\t\t%s\n",
-	"previous hash:",	unpack('H*', reverse pack 'H*', $p{hash}),
-	"previous index:",	$p{index},
-	"script length:",	length(filter $script)/2,
-	$script,
-	"sequence:",		'ff' x 4;
+	my $script;
+	if (not defined $for_sig) {
+	    $sig .= chr(1);
+	    $pubkey = chr(4) . $pubkey;
+	    for ($sig, $pubkey) {
+		$script = sprintf '%2x%s', length($_), unpack 'H*', $_;
+	    }
+	}
+	elsif ($for_sig == $i) { $script = $pscript }
+	else { $script = '' }
+
+	push @tx,
+	['previous hash',	unpack 'H*', reverse pack 'H*', $phash],
+	['previous index',	$pindex],
+	['script length',	length($script)/2],
+	['script',		$script ],
+	['sequence',		'ff' x 4];
     }
-    $s .= sprintf "%x			number of outputs\n", scalar @$output;
+
+    push @tx, ['number of outputs', sprintf '%8x', scalar @$output];
     for (@$output) {
 	my ($addr, $amount) = @$_;
-	$s .= sprintf "%16x		amount: %d\n", $amount, $amount;
-	$script = '76a9';
-	$script .= '14';
-	$script .= substr Bitcoin::Address::new($addr)->toHex, 2, -8;
-	$script .= '88ac';
-	$s .= sprintf "%x		script length\n", length(filter $script)/2;
-	$s .= sprintf "%s		script", $script;
+	my $script = join '', '76a9', '14', substr(Bitcoin::Address::new($addr)->toHex, 2, -8), '88ac';
+	push @tx,
+	['amount',		sprintf '%16x', $amount];
+	['script length',	length($script)/2],
+	['script',		$script],
     }
-    $s .= sprintf '%8x', 0; 		# lock time (ndt: ???) 
-    $s .= sprintf '%8x', 1 unless $for_sig;
+    push @tx, [ 'lock time', sprintf '%8x', 0 ];
+    push @tx, [ 'hash type', sprintf '%8x', 1 ] unless defined $for_sig;
 
-    return $s;
+    return @tx;
+
+}
+
+sub mktx {
+    my $to_address = shift;
+    my $amount = shift;
+    ...
 }
 
 sub request {

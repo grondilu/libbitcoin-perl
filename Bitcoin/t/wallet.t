@@ -1,4 +1,5 @@
 use strict;
+use v5.14;
 use Test;
 
 BEGIN { plan tests => 20 }
@@ -11,6 +12,7 @@ END { untie %wallet }
 ok tied(%wallet)->add('5KKGiz5ViCpSXzWCm9ff48g5AdK54FR3w1ByrhQDb1U6kgjmgr2'),
 '1PnA88ck7hGSsSqpPXhaVbWL3suWXEqfsF'
 ;
+ok $wallet{'1PnA88ck7hGSsSqpPXhaVbWL3suWXEqfsF'}->toWIF, '5KKGiz5ViCpSXzWCm9ff48g5AdK54FR3w1ByrhQDb1U6kgjmgr2';
 
 eval { $wallet{zzzzzzzz} = '5JkYWudPXkXHkmayfUz52WsweFpY7saT4V9vh4ZNtWgFLLwNgej' };
 ok $@;
@@ -19,8 +21,6 @@ for (<DATA>) {
     next if /^#/;
     chomp;
     eval { $wallet{(split ',')[0]} = (split ',')[1] };
-    ok not $@;
-    eval { print $wallet{(split ',')[0]}, "\n" };
     ok not $@;
 }
 

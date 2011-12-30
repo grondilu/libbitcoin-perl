@@ -8,13 +8,13 @@ use warnings;
 
 use Bitcoin::Address;
 use Bitcoin::PrivateKey;
-our $passwd;
+our ($cipher, $passwd);
 
 sub FETCH {
     my $_ = shift;
     my $addr = shift;
     my $encrypted = bless \$_->SUPER::FETCH($addr), 'Bitcoin::PrivateKey';
-    return $encrypted->decrypt($passwd)->toBase58;
+    return $encrypted->decrypt($cipher // $passwd);
 }
 
 sub STORE {
@@ -22,21 +22,20 @@ sub STORE {
     my $pubkey = Bitcoin::Address->new($key);
     my $privkey = Bitcoin::PrivateKey->new($value);
     die "incompatible version numbers" if $privkey->version != 128 + $pubkey->version;
-    die "inconsistent entry:  key is not value's Bitcoin address" if $$pubkey ne $privkey->address;
-    return $this->SUPER::STORE($pubkey->toBase58, $privkey->encrypt($passwd));
+    die "inconsistent entry:  key is not value's Bitcoin address" if $$pubkey ne $privkey->address->toBase58;
+    return $this->SUPER::STORE($pubkey->toBase58, $privkey->encrypt($cipher // $passwd));
 }
 
 sub add {
     my $_ = shift;
     die "class method call not implemented" unless ref;
     my $arg = shift; 
-	if (ref($arg) eq 'Bitcoin::PrivateKey') {
-	    my $address = $arg->address;
-	    $_->SUPER::STORE($address, $arg->encrypt($passwd));
-	    return $address;
-	}
-	else { $_->add(new Bitcoin::PrivateKey $arg) }
+    if (ref($arg) eq 'Bitcoin::PrivateKey') {
+	my $address = $arg->address->toBase58;
+	$_->SUPER::STORE($address->toBase58, $arg->encrypt($cipher // $passwd));
+	return $address;
     }
+    else { $_->add(new Bitcoin::PrivateKey $arg) }
 }
 1;
 
@@ -53,6 +52,7 @@ Bitcoin::Wallet
     $Bitcoin::Wallet::passwd = 'some password';
 
     tie my %wallet, 'Bitcoin::Wallet', '/path/to/my/wallet';
+    END { untie %wallet }
 
     $wallet{foo} = 'bar';  # dies immediately as none of this is bitcoin related
 
@@ -61,14 +61,16 @@ Bitcoin::Wallet
     $wallet{$key->address} = $$key;
     $wallet{1StupidFakeAddress31415z} = $$key;   # should die as the address is not valid;
 
-    untie %wallet;
 
 =head1 DESCRIPTION
 
-This module provides tie mechanism for a bitcoin wallet.
+This class provides tie mechanism for a bitcoin wallet.
 
 It has a simple publickey => privatekey structure, but it provides encryption
 and prevents user from entering anything but valid keys in the database.
+
+This class DOES NOT implement a bitcoin wallet such as the one that is used in
+the bitcoin vanilla software.
 
 Other data such as transaction history, blocks or contacts should
 be stored somewhere else.

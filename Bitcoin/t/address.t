@@ -38,7 +38,7 @@ EOF
 
 ok( Bitcoin::Address->new('1DxH3bjYeCKbSKvVEsXQUBjsTcxagmWjHy')->toHex, '008e15c7e4ca858c3f412461bee5d472b0b6c362a5b6673b28');
 my $addr = Bitcoin::Address->new(KEYS->[0][0]);
-ok ( $$addr, qr/^1/, "generated address does not start with 1" );
+ok ( $addr, qr/^1/, "generated address does not start with 1" );
 
 ok( Bitcoin::Address->new($$_[0])->toBase58, $$_[1] ) for @{+KEYS};
 

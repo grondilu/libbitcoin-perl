@@ -37,7 +37,7 @@ sub inverse_mod {
     for ( $method ) {
 	if ( /^dc$/i ) { return dc @_, "lIx n" }
 	else {
-	    use bigint try => 'GMP';
+	    use bigint;
 
 	    my ($a, $m) = @_;
 	    $a %= $m if $a < 0 or $m <= $a;

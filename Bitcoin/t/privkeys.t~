@@ -1,33 +1,24 @@
 use strict;
 use Test;
 
-BEGIN { plan tests => 10 }
+BEGIN { plan tests => 40 }
 
 use Bitcoin::PrivateKey;
 use Bitcoin::Address;
-
-my $key = new Bitcoin::PrivateKey;
-ok( $$key, Bitcoin::PrivateKey->new($$key)->toBase58 );
-
-die;
-my @mnemonic = $key->mnemonic;
-
-ok( $$key, Bitcoin::PrivateKey->new(@mnemonic)->toBase58 );
-
-my $before = $$key;
-my $after = $key->encrypt('pass');
-ok( bless(\$after, 'Bitcoin::PrivateKey')->decrypt('pass')->toBase58, $before, 'inconsistent encryption/decryption' );
-
 
 for (<DATA>) {
     next if /^#/;
     chomp;
     my ($i, $addr, $key) = split ',';
 
+    $key = new Bitcoin::PrivateKey $key;
     ok( Bitcoin::Address->new($addr)->toBase58, $addr, "inconsistent base58 conversion for Bitcoin::Address" );
-    ok( Bitcoin::PrivateKey->new($key)->toBase58, $key, "inconsistent base58 conversion for Bitcoin::PrivateKey" );
+    ok( $key->toBase58, $$key, "inconsistent base58 conversion for Bitcoin::PrivateKey" );
+    ok( $key->address, $addr, "failed to convert WIF to bitcoin Address" );
 
-    ok( Bitcoin::PrivateKey->new($key)->address, $addr, "failed to convert WIF to bitcoin Address" );
+    my $before = $$key;
+    my $after = $key->encrypt('pass');
+    ok( bless(\$after, 'Bitcoin::PrivateKey')->decrypt('pass')->toBase58, $before, 'inconsistent encryption/decryption' );
 }
 
 

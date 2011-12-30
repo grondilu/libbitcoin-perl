@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 package Bitcoin;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(BASE58 BTC hash hash160);
+@EXPORT_OK = qw(BASE58 BTC);
 
 use constant BTC	=> "\x{0243}";  # Ƀ
 use constant BASE58	=> qw(
@@ -11,16 +11,17 @@ use constant BASE58	=> qw(
 );
 
 sub hash160 {
-    my $_ = unpack 'H*', shift;
     return qx/
-    perl -e 'print pack q(H*), "$_"' |
+    perl -e 'print pack q(b*), "@{[unpack 'b*', shift]}"' |
     openssl dgst -sha256 -binary |
     openssl dgst -rmd160 -binary
     /;
 }
 
-use Digest::SHA qw(sha256);
-sub hash { sha256 sha256 shift }
+sub hash {
+    use Digest::SHA qw(sha256);
+    sha256 sha256 shift
+}
 
 
 
@@ -38,17 +39,6 @@ Bitcoin
 
     print  "In a bitcoin address, authorized characters are:", join(', ', BASE58), ".\n";
     printf "you owe me %.2f%s\n", 10, BTC;
-
-    use Bitcoin::Address;
-
-    my $addr = '1DxH3bjYeCKbSKvVEsXQUBjsTcxagmWjHy';
-    eval { new Bitcoin::Address $addr };
-    die "your address is not valid!" if $@;
-
-    use Bitcoin::PrivateKey;
-    my $key = new Bitcoin::PrivateKey;
-
-    printf "please send me %d%s to this bitcoin address: %s\n", 10, BTC, $key->address;
 
 =head1 DESCRIPTION
 
@@ -71,6 +61,8 @@ It currently contains:
 
 The BASE58 constant has been put here instead of in Bitcoin::Base58 because
 Bitcoin::Base58::BASE58 would have been kind of redundant.
+
+Only BASE58 and BTC can be exported.
 
 =head1 SUBMODULES
 
@@ -107,6 +99,17 @@ bitcoin client.
 =head1 SEE ALSO
 
 Bitcoin::Address, Bitcoin::PrivateKey, Bitcoin::Base58
+
+=head1 AUTHOR
+
+L Grondin <grondilu@yahoo.fr>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2011, Lucien Grondin.  All rights reserved.  
+
+This library is free software; you can redistribute it and/or modify it under 
+the same terms as Perl itself (L<perlgpl>, L<perlartistic>).
 
 =cut
 

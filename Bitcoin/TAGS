@@ -1,24 +1,34 @@
 
-Electrum.pm,50
+Bitcoin/Electrum.pm,192
 package Bitcoin::Electrum;Bitcoin::Electrum2,19
+use constant COMMANDS = qw(COMMANDS7,139
+use constant DEFAULT => {DEFAULT24,288
+sub py2json {py2json38,574
+sub json2py {json2py43,721
 
-Address.pm,339
+Bitcoin/Address.pm,358
 package Bitcoin::Address;Bitcoin::Address2,19
-sub new {new12,191
-sub size { 160 }size36,1101
-sub default_version { 0 }default_version37,1118
-sub version {version39,1145
-sub value {value44,1260
-sub checksum {checksum50,1397
-sub _hash_from_PEM {_hash_from_PEM57,1579
-sub toBase58 {toBase5870,1873
-sub toHex {toHex76,2025
+sub size { 160 }size23,297
+sub default_version { 0 }default_version24,314
+    sub new {new31,423
+    sub version {version68,1638
+    sub value {value73,1767
+    sub checksum {checksum79,1903
+    sub toHex {toHex86,2079
+sub _hash_from_PEM {_hash_from_PEM94,2248
+sub toBase58 {toBase58107,2542
 
-Wallet.pm,75
+Bitcoin/Block.pm,65
+package Bitcoin::Block;Bitcoin::Block2,19
+sub new {new10,129
+
+Bitcoin/Wallet.pm,117
 package Bitcoin::Wallet;Bitcoin::Wallet2,19
-sub TIEHASH {TIEHASH14,168
+sub FETCH {FETCH13,181
+sub STORE {STORE20,364
+sub add {add29,799
 
-Electrum/Wallet.pm,480
+Bitcoin/Electrum/Wallet.pm,480
 package Bitcoin::Electrum::Wallet;Bitcoin::Electrum::Wallet2,19
 use constant VERSION => 2;VERSION18,359
 use constant TEMPLATE => {TEMPLATE19,386
@@ -32,36 +42,98 @@ sub is_mine {is_mine105,2912
 sub is_change {is_change110,3047
 sub get_new_address {get_new_address116,3200
 
-Electrum/Client/GUI/GTK.pm,86
+Bitcoin/Electrum/Client/GUI/GTK.pm,86
 package Bitcoin::Electrum::Client::GUI::GTK;Bitcoin::Electrum::Client::GUI::GTK2,19
 
-Electrum/Client/GUI.pm,76
+Bitcoin/Electrum/Client/GUI.pm,76
 package Bitcoin::Electrum::Client::GUI;Bitcoin::Electrum::Client::GUI2,19
 
-Electrum/Mnemonic.pm,124
+Bitcoin/Electrum/Mnemonic.pm,124
 package Bitcoin::Electrum::Mnemonic;Bitcoin::Electrum::Mnemonic2,16
 sub encode {encode10,189
 sub decode {decode22,451
 
-Electrum/Client.pm,279
+Bitcoin/Electrum/Client.pm,148
 package Bitcoin::Electrum::Client;Bitcoin::Electrum::Client9,247
-sub PrivKeyToSecret { return substr shift, 9, 32 }PrivKeyToSecret42,838
-sub int_to_hex {int_to_hex43,889
-sub filter { join '', map { s/.*\t//r } split "\n", shift }filter50,1028
-sub raw_tx {raw_tx52,1089
+sub raw_tx {raw_tx38,872
+sub mktx {mktx86,2128
+sub request {request92,2202
 
-PrivateKey.pm,357
+Bitcoin/PrivateKey.pm,542
 package Bitcoin::PrivateKey;Bitcoin::PrivateKey2,16
-use constant DUMMY_PASSWD => 'dummy password';DUMMY_PASSWD11,173
-sub size { 256 }size13,221
-sub default_version { 128 }default_version14,238
-sub _hash_from_PEM {_hash_from_PEM16,267
-sub toWIF {toWIF26,486
-sub encrypt {encrypt32,601
-sub decrypt {decrypt41,919
-sub address {address51,1213
+use constant DUMMY_PASSWD => 'dummy password';DUMMY_PASSWD16,347
+sub size { 256 }size20,424
+sub default_version { 128 }default_version21,441
+sub toWIF { shift->toBase58 }toWIF24,491
+sub new {new42,779
+sub _hash_from_PEM {_hash_from_PEM47,858
+sub encrypt {encrypt57,1077
+sub decrypt {decrypt65,1311
+    sub cipher {cipher78,1665
+    sub randInt {randInt89,1923
+    sub public_point {public_point94,2075
+    sub address {address101,2219
+    sub salt {salt109,2393
 
-Base58.pm,226
+Bitcoin/Base58.pm,241
 package Bitcoin::Base58;Bitcoin::Base583,58
-sub decode { shift =~ m/.$/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }decode18,280
-sub encode { my $x = shift; encode($x/58) . (BASE58)[$x%58] if $x > 0 } encode19,359
+    sub decode { shift =~ m/.$/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }decode20,297
+    sub encode { my $_ = shift; return encode($_/58) . (BASE58)[$_%58] if $_ > 0 } encode21,380
+
+Bar.pm,53
+package Bar;Bar2,16
+sub bar { 1 + shift }bar5,42
+
+EC/Curves.pm,81
+package EC::Curves;EC::Curves3,42
+use constant secp256k1 => {secp256k112,222
+
+EC/DSA/PrivateKey.pm,98
+package EC::DSA::PrivateKey;EC::DSA::PrivateKey2,16
+sub new {new10,123
+sub sign {sign16,404
+
+EC/DSA/PublicKey.pm,104
+package EC::DSA::PublicKey;EC::DSA::PublicKey2,16
+sub new {new10,122
+sub verifies {verifies20,629
+
+EC/DSA.pm,196
+package EC::DSA;EC::DSA2,16
+sub int_to_string {int_to_string9,93
+sub string_to_int {string_to_int13,243
+sub point_is_valid {point_is_valid18,350
+sub digest_integer {digest_integer25,572
+
+Bitcoin.pm,170
+package Bitcoin;Bitcoin2,19
+use constant BTC	=> "\x{0243}";  # ɃBTC6,100
+use constant BASE58	=> qw(BASE587,138
+sub hash160 {hash16013,305
+sub hash {hash21,472
+
+Foo.pm,76
+package Foo;Foo3,30
+sub talk { say "hi" }talk5,44
+package Bar;Bar7,67
+
+EC.pm,258
+package EC;EC3,49
+    sub Delta { -16*(4*$param{a}**3 + 27*$param{b}**2) }Delta24,309
+    sub check {check25,366
+    sub Cmp {Cmp33,694
+    sub double {double37,824
+    sub add {add44,1070
+    sub mult {mult55,1504
+package Point;Point73,1942
+
+NumberTheory.pm,147
+package NumberTheory;NumberTheory2,16
+use constant DC_REGISTERS => 'DC_REGISTERS13,190
+sub dc {dc28,435
+sub inverse_mod {inverse_mod36,590
+
+LongBase.pm,86
+package LongBase;LongBase3,90
+sub encode {encode22,433
+sub decode {decode28,544
