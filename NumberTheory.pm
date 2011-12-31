@@ -67,11 +67,10 @@ NumberTheory
     use NumberTheory qw(inverse_mod);
 
     use bigint;
-    my $p = 2**61 - 1;
-    $i = inverse_mod 31, $p;
+    $mersenne_prime = 2**61 - 1;
+    $i = inverse_mod 31, $mersenne_prime;
 
-    use Test;
-    ok $i * 31 % $p, 1;
+    print $i * 31 % $p;
 
     $NumberTheory::method = 'simple';
 

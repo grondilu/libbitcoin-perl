@@ -1,9 +1,11 @@
 #!/usr/bin/perl
 package Bitcoin::PrivateKey;
 require Bitcoin::Address;
+require Exporter;
 # A bitcoin privatekey inherits from a bitcoin address as it
 # shares a common encoding system (Wallet Import Format)
-@ISA = qw(Bitcoin::Address);
+@ISA = qw(Bitcoin::Address Exporter);
+@EXPORT_OK = qw(G);
 
 use strict;
 use warnings;
@@ -12,11 +14,15 @@ use EC;
 use EC::Curves qw(secp256k1);
 EC::set_param secp256k1;
 
+# group generator
+use constant G => secp256k1->{G};
+
 # default password for encryption
 use constant DUMMY_PASSWD => 'dummy password';
 
 # Redefined methods
 sub new;
+sub value;
 sub size { 256 }
 sub default_version { 128 }
 
@@ -35,48 +41,50 @@ use overload
 '+' => sub {
     my ($a, $b) = @_;
     warn 'operands are not blessed into the same package' unless ref $a eq ref $b;
-    ref($a)->new( ($a->value + $b->value) % secp256k1->{G}[2] )
+    ref($a)->new( ($a->value + $b->value) % G->[2] )
 },
-'<<' => sub {
-    die "syntax error" if $_[2];
-    my $_ = __PACKAGE__->new(shift);
-    return $_->salt(shift);
-};
+'*' => sub {
+    if ($_[2] or ref $_[1] ne 'Point') {
+	use bigint;
+	($_[0]->value * $_[1]->value) % G->[2];
+    }
+    else { EC::mult $_[0]->value, $_[1] }
+},
+'int' => sub { shift->value },
+;
 
 
 # definitions
 #
 sub new {
     my $_ = shift;
-    return $_->SUPER::new(shift // randInt());
+    my $arg = shift;
+    if (ref $arg eq 'Crypt::Rijndael') { $_->SUPER::new(randInt)->encrypt($arg) }
+    else { $_->SUPER::new($arg // randInt()) }
 }
 
-sub _hash_from_PEM {
-    my $_ = shift;
-    die "instance method call not implemented" if ref;
-    return qx(
-    echo "@{[shift]}" |
-    openssl ec -text -noout 2>&- |
-    sed -n '3,5s/[: ]//gp'
-    ) =~ s/\n//gr ;
+sub value {
+    my $value = shift->SUPER::value;
+    die "key is encrypted" unless ref $value eq 'Math::BigInt';
+    return $value;
 }
 
 sub encrypt {
     my $_ = shift;
     die "class method call not implemented" unless ref;
     # noise filling -> encrypt
-    $$_ .= '__STOP__'; $$_ .= chr rand 256 while length $$_ < 128;
-    $$_ = ref->cipher(shift)->encrypt($$_);
+    $$_[1] .= '__STOP__'; $$_[1] .= chr rand 256 while 8*length($$_[1]) % 128;
+    $$_[1] = ref->cipher(shift)->encrypt($$_[1]);
+    return $_;
 }
 
 sub decrypt {
     my $_ = shift;
     die "class method call not implemented" unless ref;
     # decrypt -> remove noise
-    $$_ = ref->cipher(shift)->decrypt($$_);
-    use Bitcoin qw(BASE58);
-    die "wrong password $$_" unless $$_ =~ /^[@{[BASE58]}]+__STOP__/x;
-    $$_ =~ s/__STOP__.*//ms;
+    $$_[1] = ref->cipher(shift)->decrypt($$_[1]);
+    die 'wrong password' unless $$_[1] =~ s/__STOP__.*//ms;
+    use Math::BigInt; $$_[1] = new Math::BigInt $$_[1];
     return $_;
 }
 
@@ -103,23 +111,24 @@ sub decrypt {
     sub public_point {
 	my $_ = shift;
 	die "class method call not implemented" unless ref;
-
-	return bless EC::mult($_->value, secp256k1->{G}), 'Point';
+	return EC::mult $_->value, G;
     }
 
     sub address {
 	my $_ = shift;
 	die "class method call not implemented" unless ref;
 	my $version = shift;
-
 	return new Bitcoin::Address $_->public_point, $version;
     }
 
-    sub salt {
+    sub _value_from_PEM {
 	my $_ = shift;
-	die "class method call not implemented" unless ref;
-	$_ = ref($_)->new(hex sha256_hex join ':', $_->toBase58, @_ );
-	return $_;
+	die "instance method call not implemented" if ref;
+	return hex(qx(
+	echo "@{[shift]}" |
+	openssl ec -text -noout 2>&- |
+	sed -n '3,5s/[: ]//gp'
+	) =~ s/\n//gr);
     }
 
 }
@@ -136,38 +145,32 @@ Bitcoin::PrivateKey
 
     use Bitcoin::PrivateKey;
 
-    $randomkey = new Bitcoin::PrivateKey;
-    print $randomkey;
-
-    $encrypted_key = $randomkey->encrypt('dummy password');
-    $decrypted_key = bless(\$encrypted_key, 'Bitcoin::PrivateKey')->decrypt('dummy password');
-
-    $key = Bitcoin::PrivateKey->new('5JZDTbbezKW7dZcfo5auX8koqGzcJV5kA7MiehxxeMZnZvev8Dy');
-    print $key->address;
-    $key = new Bitcoin::PrivateKey <<EOF
+    my $key = new Bitcoin::PrivateKey;
+    my $key = new Bitcoin::PrivateKey '5JZDTbbezKW7dZSPECIMENSPECIMENSPECIMENxxeMZnZvev8Dy';
+    my $key = new Bitcoin::PrivateKey 123456789;
+    my $key = new Bitcoin::PrivateKey <<EOF
     -----BEGIN EC PARAMETERS-----
     BgUrgQQACg==
     -----END EC PARAMETERS-----
     -----BEGIN EC PRIVATE KEY-----
-    MHQCAQEEIGF5sspCOHUUAGf4C151UAX3/8FG7dui5jOBflx86WSjoAcGBSuBBAAK
-    oUQDQgAEg/kE+E72DbB6yuHh8ge1FperHOHDahjPzuXEz1/JZ00Qt3wJQQwUC0W9
+    MHQCAQEEIGF5sspCOHUUAGf4C1SPECIMENSPECIMENSPECIMENSjoAcGBSuBBAAK
+    oUQDQgAEg/kE+E72DbBSPECIMENSPECIMENSPECIMENEz1/JZ00Qt3wJQQwUC0W9
     7INs0AnqUgxwMyO5JL1TKOf1vP0Zbw==
     -----END EC PRIVATE KEY-----
     EOF
     ;
 
-    # building a secret exponent
-    use Digest::SHA qw(sha256);
-    my $secexp = "In cryptography we trust";
-    $secexp = sha256 $secexp for 1 .. 1_000_000;
-    use bigint;
-    $secexp = hex unpack 'H*', $secexp;
+    print $key;
+    print $key->address;
+    my $secexp = $key->value;
+    my $secexp = $$key;
+    my $public_point = $key->public_point;
+    my $public_point = !$key;
 
-    # create the private key from this secret exponent
-    $key = new Bitcoin::PrivateKey $secexp;
+    $encrypted_key = $randomkey->encrypt('dummy password');
+    $decrypted_key = $encrypted_key->decrypt('dummy password');
 
-    # adding two keys
-    print $key + new Bitcoin::PrivateKey;
+    print $key1 + $key2;
 
 
 =head1 DESCRIPTION
@@ -177,8 +180,6 @@ random generation.
 
 It inherits from C<Bitcoin::Address> as it shares with it the version-checksum encoding
 system (called "Wallet Import Format" [WIF] for a private key).
-
-This class DOES NOT perform message signatures.  Use EC::DSA::PrivateKey to do this.
 
 =head2 Key generation
 
@@ -193,10 +194,6 @@ the constructor with no argument:
 
 In this case, the constructor creates, as randomly as possible, a 32-bytes
 integer and uses it as secret exponent of the secp256k1 elliptic curve.
-
-This is the most secure way to generate a key, but there are very few
-possibilities to allow the user to memorize such a key.  It has to be stored on
-disk or paper.
 
 =head3 Generation from WIF or PEM
 
@@ -230,36 +227,50 @@ integer will be directly used as the secret exponent.
 
 =head3 Salting a previous key
 
-You can create a key by salting a previous one with any arbitrary string.
+You can create a key by salting a previous one with any arbitrary string.  To
+do so, the hash dereferenciation operator has been overloaded.Each fetched
+value is a blessed reference to a new Bitcoin::PrivateKey object.
 
-    my $key = new Bitcoin::PrivateKey;
-    salt $key "Long ago, in a distant land...";
-    # - or -
-    $key->salt("Long ago, in a distant land...");
+    my $main_key = new Bitcoin::PrivateKey;
+    my %wallet = %$main_key;
+    my $socks_key = $wallet{"savings account to buy alpaca socks"};
+    print $socks_key->address;
 
 Salting is deterministic, but also destructive: you can not retrieve the
-salting string from the salted key.
+salting string from the salted key.  Neither can you retrieve the main key.
 
-This method does inplace modification and returns the modified calling object.  For creating
-a new key without modifying the calling object, use the overloaded C<E<lt>E<lt>> operator:
-
-    say $key << "Long ago, in a distant land...";
-
-Beware: the C<salt> method accepts any number of strings as a arguments, but
-the C<E<lt>E<lt>> operator only accepts one.
+If you create a whole wallet using this salting method, your main key becomes
+highly sensitive information and should be properly encrypted and backed up.
 
 =head2 AES Encryption
 
-The C<encrypt> method does in-place encryption and returns the non-blessed
-encrypted string.  The C<decrypt> method does in-place decryption and returns the
-calling instance.
+The C<encrypt> and C<decrypt> methods do in-place encryption and decryption.  Both
+return the reference of the modified calling object.
 
-Without argument, the function uses the seeding string if it exists, and dies
-otherwise.
+Argument can be either a password or a previously built C<Crypt::Rijndael> cipher.
 
-Encryption is mostly usefull for keys that were created using a random number.
-For string-generated keys, it is probably safer not to store the key anywhere,
-but to generate a single-use copy every time.
+    use Crypt::Rijndael;
+    my $cipher = new Crypt::Rijndael "some password";
+    my $key = Bitcoin::PrivateKey->new->encrypt($cipher);
+
+It is also possible to provide the cipher as an argument to the constuctor:
+
+    my $key = new Bitcoin::PrivateKey $cipher;
+
+Once a key is encrypted, most method calls will die with a "key is encrypted"
+message.  Basically only the C<decrypt> method can be executed.
+
+=head2 Overloaded operators
+
+Several operators have been overloaded for this class in order to ease elliptic
+curve related calculations.   Addition or multiplication of two keys returns a
+key whose value is the modular sum or multiplication of the keys values.
+Multiplicating a key with a C<'Point'>-blessed reference, in that order,
+returns the elliptic curve multiplication of the point by the key value.
+
+=head2 Message signing
+
+B<TODO>
 
 =head1 AUTHOR
 

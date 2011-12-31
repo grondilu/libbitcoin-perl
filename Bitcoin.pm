@@ -20,10 +20,8 @@ sub hash160 {
 
 sub hash {
     use Digest::SHA qw(sha256);
-    sha256 sha256 shift
+    sha256 sha256 shift;
 }
-
-
 
 1;
 
@@ -42,8 +40,11 @@ Bitcoin
 
 =head1 DESCRIPTION
 
-This module implements bitcoin's specific constants and functions that didn't
-fit in any subcategories.
+Bitcoin is a peer-to-peer electronic cash system created in 2009 by Satoshi Nakamoto.  This module
+and its submodules implement several tools for bitcoin-related operations.
+
+This particular module implements bitcoin's specific constants and functions
+that didn't fit in any subcategories.
 
 =encoding utf8
 
@@ -103,7 +104,7 @@ in Python.  Hopefully someday this module will be a Perl implementation of Elect
 
 =head1 SEE ALSO
 
-Bitcoin::Address, Bitcoin::PrivateKey, Bitcoin::Base58
+Bitcoin::Address, Bitcoin::PrivateKey, Bitcoin::Base58, EC, EC::DSA
 
 =head1 AUTHOR
 

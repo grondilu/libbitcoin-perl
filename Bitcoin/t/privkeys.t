@@ -13,12 +13,11 @@ for (<DATA>) {
 
     $key = new Bitcoin::PrivateKey $key;
     ok( Bitcoin::Address->new($addr)->toBase58, $addr, "inconsistent base58 conversion for Bitcoin::Address" );
-    ok( $key->toBase58, $$key, "inconsistent base58 conversion for Bitcoin::PrivateKey" );
     ok( $key->address, $addr, "failed to convert WIF to bitcoin Address" );
 
-    my $before = $$key;
-    my $after = $key->encrypt('pass');
-    ok( bless(\$after, 'Bitcoin::PrivateKey')->decrypt('pass')->toBase58, $before, 'inconsistent encryption/decryption' );
+    my $before = $key->value;
+    $key->encrypt('pass');
+    ok( $key->decrypt('pass')->value, $before, 'inconsistent encryption/decryption' );
 }
 
 __DATA__

@@ -12,7 +12,7 @@ sub decode;
 sub encode;
 
 use Bitcoin qw(BASE58);
-my %b58 = map { (BASE58)[$_], $_ } 0 .. 57;
+my %b58 = map { (BASE58)[$_] => $_ } 0 .. 57;
 
 {
     use bigint;
