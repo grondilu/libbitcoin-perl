@@ -35,7 +35,7 @@ sub dc {
 
 sub inverse_mod {
     for ( $method ) {
-	if ( /^dc$/i ) { return dc @_, "lIx n" }
+	if ( /^dc$/i ) { return new Math::BigInt dc @_, "lIx n" }
 	else {
 	    use bigint;
 
