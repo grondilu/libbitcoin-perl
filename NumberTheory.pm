@@ -30,12 +30,12 @@ sub dc {
     open my $dc, '-|', qw(dc -e),
     DC_REGISTERS.
     join ' ', map s/^-/_/r, @_;
-    return join '', map s/\\\n//r, <$dc>;
+    return new Math::BigInt join '', map s/\\\n//r, <$dc>;
 }
 
 sub inverse_mod {
     for ( $method ) {
-	if ( /^dc$/i ) { return new Math::BigInt dc @_, "lIx n" }
+	if ( /^dc$/i ) { return dc @_, "lIx n" }
 	else {
 	    use bigint;
 
