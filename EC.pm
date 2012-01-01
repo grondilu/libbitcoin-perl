@@ -26,12 +26,13 @@ sub set_param {
 
     sub Delta { -16*(4*$a**3 + 27*$b**2) }
     sub check {
-	my $_ = shift;
-	return $_ unless @$_;
+	{ package debug; our $i };
+	my $u = shift;
+	return $u unless @$u;
 	die "curve parameters are not defined" unless defined $a and defined $b;
 	die "curve has nul discriminant" if Delta == 0;
-	die "point is not on elliptic curve" unless ($$_[1]**2 - $$_[0]**3 - $a*$$_[0] - $b) % $p == 0;
-	return bless $_, 'Point';
+	die "point is not on elliptic curve" unless ($$u[1]**2 - $$u[0]**3 - $a*$$u[0] - $b) % $p == 0;
+	return bless $u, 'EC::Point';
     }
     sub Cmp {
 	my ($u, $v) = map { check $_ } @_;
@@ -42,24 +43,24 @@ sub set_param {
 	return $u unless @$u;
 	my $l = (3*$$u[0]**2 + $a) * inverse_mod(2 * $$u[1], $p) % $p;
 	my $x = $l**2 - 2*$$u[0];
-	return bless [ map { $_ % $p } $x, $l*($$u[0] - $x) - $$u[1] ], 'Point';
+	return bless [ map { $_ % $p } $x, $l*($$u[0] - $x) - $$u[1] ], 'EC::Point';
     }
     sub add {
 	my ($u, $v) = eval { map check($_), @_ };
 	die "$@ in add" if $@;
 	return $u unless @$v;
 	return $v unless @$u;
-	return +($$u[1] + $$v[1]) % $p == 0 ? [] : double $u if $$u[0] % $p == $$v[0] % $p;
+	return +($$u[1] + $$v[1]) % $p == 0 ? bless [], 'EC::Point' : double $u if $$u[0] % $p == $$v[0] % $p;
 	my $i = inverse_mod($$v[0] - $$u[0], $p);
 	my $l = ($$v[1] - $$u[1]) * $i % $p;
 	my $x = $l**2 - $$u[0] - $$v[0];
-	return bless [ map { $_ % $p } $x, $l*($$u[0] - $x) - $$u[1] ], 'Point';
+	return bless [ map { $_ % $p } $x, $l*($$u[0] - $x) - $$u[1] ], 'EC::Point';
     }
     sub mult {
 	my $k = shift;
 	my $u = check shift;
 	$k %= $$u[2] if defined $$u[2];
-	return [] if $k == 0 or !@$u;
+	return bless [], 'EC::Point' if $k == 0 or not @$u;
 	die "negative factor" if $k < 0;
 	my $k3 = 3*$k;
 	my $i = 1; $i *= 2 while $i <= $k3; $i /= 2;
@@ -73,10 +74,10 @@ sub set_param {
     }
 }
 
-package Point;
+package EC::Point;
 use overload
 '+' => sub { bless EC::add @_[0..1] },
-'*' => sub { die 'wrong argument order in multiplication', $_[2] unless $_[2]; bless EC::mult @_[1,0] },
+'*' => sub { die 'wrong argument order in multiplication' unless $_[2]; bless EC::mult @_[1,0] },
 q("") => sub {
     my $_ = shift;
     return @$_ ?
@@ -113,7 +114,7 @@ This module provides functions to perform arithmetics in Elliptic Curves.
 A point is just a blessed reference to an array of integers, the third, optionnal one
 being the order.  A point at the infinite is a reference to the empty array.
 
-A small Point class can be used to bless points and handle them using overloaded
+A small EC::Point class can be used to bless points and handle them using overloaded
 addition, multiplication and stringification operators.
 
 =head1 BUGS

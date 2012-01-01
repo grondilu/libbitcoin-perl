@@ -1,36 +1,24 @@
 #!/usr/bin/perl -w
 package Bitcoin::Electrum;
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(SERVER_LIST DEFAULT_PORT py2json json2py);
 use strict;
 
-use constant COMMANDS = qw(
-help
-validateaddress
-balance
-contacts
-create
-payto
-sendtx
-password
-newaddress
-addresses
-history
-label
-gui
-mktxseedt2
+use constant COMMANDS => qw(
+help validateaddress balance contacts create payto sendtx password newaddress
+addresses history label gui mktxseedt2
 );
 
 use constant DEFAULT => {
-    GAP_LIMIT => 5,
+    SERVERS => [ qw(
+    ecdsa.org
+    electrum.novit.ro
+    ) ],
     PORT => 50000,
-    SERVER_LIST => [ qw(
-	ecdsa.org
-	electrum.novit.ro
-	)
-    ],
     FEE => 0.005,
 };
+
+our @server = @{DEFAULT->{SERVERS}};
+our $port = DEFAULT->{PORT};
+our $fee = DEFAULT->{FEE};
 
 # Electrum server communicates with clients using python syntax (sic),
 # so we'll use home made translators, using JSON as a bridge.
@@ -55,7 +43,10 @@ Bitcoin::Electrum
 
 =head1 SYNOPSIS
 
-use Bitcoin::Electrum qw(SERVER_LIST);
+use Bitcoin::Electrum;
+
+push @Bitcoin::Electrum::server, '192.168.0.45';
+$Bitcoin::Electrum::fee = 0;
 
 =head1 DESCRIPTION
 

@@ -3,12 +3,21 @@ package Bitcoin;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(BASE58 BTC);
 
-use constant BTC	=> "\x{0243}";  # Ƀ
-use constant BASE58	=> qw(
+use constant BTC =>  "\x{0243}";  # Ƀ
+use constant BASE58	=> qw{
       1 2 3 4 5 6 7 8 9
     A B C D E F G H   J K L M N   P Q R S T U V W X Y Z
     a b c d e f g h i j k   m n o p q r s t u v w x y z
-);
+};
+
+use constant {
+    # more boring stuff
+    MAX_BLOCK_SIZE	=>   1_000_000,
+    COIN		=> 100_000_000,
+    CENT		=>   1_000_000,
+    MAX_MONEY		=>       21e14,
+    TEST		=>           0,
+};
 
 sub hash160 {
     return qx/
@@ -26,6 +35,22 @@ sub hash {
 1;
 
 __END__
+static const unsigned int MAX_BLOCK_SIZE = 1000000;
+static const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2;
+static const int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50;
+static const int64 COIN = 100000000;
+static const int64 CENT = 1000000;
+static const int64 MIN_TX_FEE = 50000;
+static const int64 MIN_RELAY_TX_FEE = 10000;
+static const int64 MAX_MONEY = 21000000 * COIN;
+inline bool MoneyRange(int64 nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
+static const int COINBASE_MATURITY = 100;
+#ifdef USE_UPNP
+#static const int fHaveUPnP = true;
+##else
+#static const int fHaveUPnP = false;
+##endif
+#
 
 =head1 TITLE
 
@@ -35,8 +60,8 @@ Bitcoin
 
     use Bitcoin qw(BASE58 BTC);
 
-    print  "In a bitcoin address, authorized characters are:", join(', ', BASE58), ".\n";
-    printf "you owe me %.2f%s\n", 10, BTC;
+    printf "In a bitcoin address, authorized characters are: %s\n", join(', ', BASE58);
+    printf "You owe me %.2f%s.\n", 10, BTC;
 
 =head1 DESCRIPTION
 

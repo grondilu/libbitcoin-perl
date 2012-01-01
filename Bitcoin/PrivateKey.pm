@@ -44,13 +44,14 @@ use overload
     ref($a)->new( ($a->value + $b->value) % G->[2] )
 },
 '*' => sub {
-    if ($_[2] or ref $_[1] ne 'Point') {
+    if ($_[2] or ref $_[1] ne 'EC::Point') {
 	use bigint;
 	($_[0]->value * $_[1]->value) % G->[2];
     }
     else { EC::mult $_[0]->value, $_[1] }
 },
 'int' => sub { shift->value },
+'exp' => sub { shift->public_point },
 ;
 
 
@@ -163,9 +164,9 @@ Bitcoin::PrivateKey
     print $key;
     print $key->address;
     my $secexp = $key->value;
-    my $secexp = $$key;
+    my $secexp = int $key;
     my $public_point = $key->public_point;
-    my $public_point = !$key;
+    my $public_point = exp $key;
 
     $encrypted_key = $randomkey->encrypt('dummy password');
     $decrypted_key = $encrypted_key->decrypt('dummy password');
@@ -265,7 +266,7 @@ message.  Basically only the C<decrypt> method can be executed.
 Several operators have been overloaded for this class in order to ease elliptic
 curve related calculations.   Addition or multiplication of two keys returns a
 key whose value is the modular sum or multiplication of the keys values.
-Multiplicating a key with a C<'Point'>-blessed reference, in that order,
+Multiplicating a key with a C<'EC::Point'>-blessed reference, in that order,
 returns the elliptic curve multiplication of the point by the key value.
 
 =head2 Message signing

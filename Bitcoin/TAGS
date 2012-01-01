@@ -6,17 +6,17 @@ use constant DEFAULT => {DEFAULT24,288
 sub py2json {py2json38,574
 sub json2py {json2py43,721
 
-Bitcoin/Address.pm,358
+Bitcoin/Address.pm,362
 package Bitcoin::Address;Bitcoin::Address2,19
-sub size { 160 }size23,297
-sub default_version { 0 }default_version24,314
-    sub new {new31,423
-    sub version {version68,1638
-    sub value {value73,1767
-    sub checksum {checksum79,1903
-    sub toHex {toHex86,2079
-sub _hash_from_PEM {_hash_from_PEM94,2248
-sub toBase58 {toBase58107,2542
+sub size { 160 }size26,349
+sub default_version { 0 }default_version27,366
+    sub new {new34,480
+    sub _value_from_PEM {_value_from_PEM75,1726
+    sub checksum {checksum87,2005
+    sub toHex {toHex94,2215
+    sub toBase58 {toBase58100,2413
+sub version {version108,2590
+sub value {value113,2689
 
 Bitcoin/Block.pm,65
 package Bitcoin::Block;Bitcoin::Block2,19
@@ -59,30 +59,27 @@ sub raw_tx {raw_tx38,872
 sub mktx {mktx86,2128
 sub request {request92,2202
 
-Bitcoin/PrivateKey.pm,542
+Bitcoin/PrivateKey.pm,593
 package Bitcoin::PrivateKey;Bitcoin::PrivateKey2,16
-use constant DUMMY_PASSWD => 'dummy password';DUMMY_PASSWD16,347
-sub size { 256 }size20,424
-sub default_version { 128 }default_version21,441
-sub toWIF { shift->toBase58 }toWIF24,491
-sub new {new42,779
-sub _hash_from_PEM {_hash_from_PEM47,858
-sub encrypt {encrypt57,1077
-sub decrypt {decrypt65,1311
-    sub cipher {cipher78,1665
-    sub randInt {randInt89,1923
-    sub public_point {public_point94,2075
-    sub address {address101,2219
-    sub salt {salt109,2393
+use constant G => secp256k1->{G};G18,375
+use constant DUMMY_PASSWD => 'dummy password';DUMMY_PASSWD21,444
+sub size { 256 }size26,532
+sub default_version { 128 }default_version27,549
+sub toWIF { shift->toBase58 }toWIF30,599
+sub new {new59,1157
+sub value {value66,1339
+sub encrypt {encrypt72,1474
+sub decrypt {decrypt81,1741
+    sub cipher {cipher94,2090
+    sub randInt {randInt106,2349
+    sub public_point {public_point111,2501
+    sub address {address117,2631
+    sub _value_from_PEM {_value_from_PEM124,2804
 
 Bitcoin/Base58.pm,241
 package Bitcoin::Base58;Bitcoin::Base583,58
     sub decode { shift =~ m/.$/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }decode20,297
     sub encode { my $_ = shift; return encode($_/58) . (BASE58)[$_%58] if $_ > 0 } encode21,380
-
-Bar.pm,53
-package Bar;Bar2,16
-sub bar { 1 + shift }bar5,42
 
 EC/Curves.pm,81
 package EC::Curves;EC::Curves3,42
@@ -105,35 +102,26 @@ sub string_to_int {string_to_int13,243
 sub point_is_valid {point_is_valid18,350
 sub digest_integer {digest_integer25,572
 
-Bitcoin.pm,170
+Bitcoin.pm,169
 package Bitcoin;Bitcoin2,19
-use constant BTC	=> "\x{0243}";  # ɃBTC6,100
-use constant BASE58	=> qw(BASE587,138
-sub hash160 {hash16013,305
-sub hash {hash21,472
+use constant BTC	=> "\x{0243}";  # ɃBTC6,87
+use constant BASE58	=> qw(BASE587,125
+sub hash160 {hash16013,292
+sub hash {hash21,459
 
-Foo.pm,76
-package Foo;Foo3,30
-sub talk { say "hi" }talk5,44
-package Bar;Bar7,67
-
-EC.pm,258
+EC.pm,285
 package EC;EC3,49
-    sub Delta { -16*(4*$param{a}**3 + 27*$param{b}**2) }Delta24,309
-    sub check {check25,366
-    sub Cmp {Cmp33,694
-    sub double {double37,824
-    sub add {add44,1070
-    sub mult {mult55,1504
-package Point;Point73,1942
+sub set_param {set_param19,232
+    sub Delta { -16*(4*$a**3 + 27*$b**2) }Delta27,364
+    sub check {check28,407
+    sub Cmp {Cmp36,719
+    sub double {double40,849
+    sub add {add47,1086
+    sub mult {mult58,1497
+package EC::Point;EC::Point76,1934
 
 NumberTheory.pm,147
 package NumberTheory;NumberTheory2,16
 use constant DC_REGISTERS => 'DC_REGISTERS13,190
 sub dc {dc28,435
-sub inverse_mod {inverse_mod36,590
-
-LongBase.pm,86
-package LongBase;LongBase3,90
-sub encode {encode22,433
-sub decode {decode28,544
+sub inverse_mod {inverse_mod37,622

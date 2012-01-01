@@ -24,7 +24,7 @@ sub toHex;
 sub _value_from_PEM;
 
 sub size { 160 }
-sub default_version { 0 }
+sub default_version { Bitcoin::TEST ? 1 : 0 }
 
 use overload fallback => 'TRUE', q("") => sub { shift->toBase58 };
 
@@ -42,7 +42,7 @@ use overload fallback => 'TRUE', q("") => sub { shift->toBase58 };
 	elsif (ref eq 'EC::DSA::PublicKey') {
 	    ...
 	}
-	elsif (ref eq 'Point') {
+	elsif (ref eq 'EC::Point') {
 	    use EC;
 	    use EC::Curves qw(secp256k1);
 	    EC::set_param secp256k1;

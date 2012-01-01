@@ -30,7 +30,8 @@ sub dc {
     open my $dc, '-|', qw(dc -e),
     DC_REGISTERS.
     join ' ', map s/^-/_/r, @_;
-    return new Math::BigInt join '', map s/\\\n//r, <$dc>;
+    use Math::BigInt;
+    new Math::BigInt join '', map s/\\\n//r, <$dc>;
 }
 
 sub inverse_mod {
