@@ -143,13 +143,12 @@ Bitcoin::Address
     print $addr;          # prints dHt2i2qMNnUFm4aGHrixK1f68DXLyjq4L
 
     # instanciation from a PEM public key
-    $addr = new Bitcoin::Address <<EOF
+    $addr = new Bitcoin::Address <<stop ;
     -----BEGIN PUBLIC KEY-----
     MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEg/kE+E72DbB6yuHh8ge1FperHOHDahjP
     zuXEz1/JZ00Qt3wJQQwUC0W97INs0AnqUgxwMyO5JL1TKOf1vP0Zbw==
     -----END PUBLIC KEY-----
-    EOF
-    ;
+    stop
    
 
 =head1 DESCRIPTION

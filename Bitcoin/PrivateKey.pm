@@ -149,7 +149,7 @@ Bitcoin::PrivateKey
     my $key = new Bitcoin::PrivateKey;
     my $key = new Bitcoin::PrivateKey '5JZDTbbezKW7dZSPECIMENSPECIMENSPECIMENxxeMZnZvev8Dy';
     my $key = new Bitcoin::PrivateKey 123456789;
-    my $key = new Bitcoin::PrivateKey <<EOF
+    my $key = new Bitcoin::PrivateKey <<'...' ;
     -----BEGIN EC PARAMETERS-----
     BgUrgQQACg==
     -----END EC PARAMETERS-----
@@ -158,8 +158,7 @@ Bitcoin::PrivateKey
     oUQDQgAEg/kE+E72DbBSPECIMENSPECIMENSPECIMENEz1/JZ00Qt3wJQQwUC0W9
     7INs0AnqUgxwMyO5JL1TKOf1vP0Zbw==
     -----END EC PRIVATE KEY-----
-    EOF
-    ;
+    ...
 
     print $key;
     print $key->address;
@@ -202,10 +201,8 @@ This duplicates a key from a WIF or PEM representation.  It can be usefull for
 recovery, import, or checksum validation. 
 
     my $key = new Bitcoin::PrivateKey '5JZDTbbezKW7dZcfo5auX8koqGzcJV5kA7MiehxxeMZnZvev8Dy';
-
 or
-
-    my $key = new Bitcoin::PrivateKey <<EOF
+    my $key = new Bitcoin::PrivateKey <<'...' ;
     -----BEGIN EC PARAMETERS-----
     BgUrgQQACg==
     -----END EC PARAMETERS-----
@@ -214,7 +211,7 @@ or
     oUQDQgAEREF8RQPfTBofCdiKvyOaS1PnxwJx+x+UWp2f4B9SkvNDGYyRRgiMTPr4
     o+BZJ/optSdvTNb0WvZeuTQ+BVm+TA==
     -----END EC PRIVATE KEY-----
-    EOF
+    ...
 
 =head3 Generation from an integer
 

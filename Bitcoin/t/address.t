@@ -6,34 +6,24 @@ BEGIN { plan tests => 8, todo => [] }
 use Bitcoin::Address;
 
 use constant KEYS => [
-
-    [ <<EOF
+    [ <<stop , '1QAVk6rZ8Tzj6665X3v1yPGfKwNHFjGV4y' ],
 -----BEGIN PUBLIC KEY-----
 MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAECTD4KyRWycM+6PDTg3p6G8EwBktLMItu
 2CqUIA7vBDX+KnjtZHpF0lUMApTGVHr0900glvWOjEKraB57wlle2Q==
 -----END PUBLIC KEY-----
-EOF
-	, '1QAVk6rZ8Tzj6665X3v1yPGfKwNHFjGV4y'
-    ],
-
-    [ <<EOF
+stop
+    [ <<stop , '15gR9zUv3YW6DRf9fVvPXC7x9csPM8QcTg' ],
 -----BEGIN PUBLIC KEY-----
 MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEg/kE+E72DbB6yuHh8ge1FperHOHDahjP
 zuXEz1/JZ00Qt3wJQQwUC0W97INs0AnqUgxwMyO5JL1TKOf1vP0Zbw==
 -----END PUBLIC KEY-----
-EOF
-	, '15gR9zUv3YW6DRf9fVvPXC7x9csPM8QcTg'
-    ],
-
-    [ <<EOF
+stop
+    [ <<stop , '1HPXLeY56LaB91HHFGyHq4F2cCmfFmmMLh' ],
 -----BEGIN PUBLIC KEY-----
 MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE6TS3lvFdqdU2aUMvj08Y8RHJ4xPXCK5C
 NNstfRamvKMZSlFGIlKaxEg7Cux2KzbGpUbDsyR92wGRqWjj2cSzNQ==
 -----END PUBLIC KEY-----
-EOF
-	, '1HPXLeY56LaB91HHFGyHq4F2cCmfFmmMLh'
-    ],
-
+stop
 ];
 
 ok( Bitcoin::Address->new('1DxH3bjYeCKbSKvVEsXQUBjsTcxagmWjHy')->toBase58, '1DxH3bjYeCKbSKvVEsXQUBjsTcxagmWjHy');
