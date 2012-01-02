@@ -8,6 +8,9 @@ use warnings;
 sub new;
 sub clear;
 sub Write;
+sub map_file;
+sub seek_file;
+sub Close;
 sub read_compact_size;
 sub write_compact_size;
 sub read_string;
@@ -25,14 +28,26 @@ sub _no_instance;
 sub new {
     my $class = shift->_no_instance;
     my $arg = shift;
-    bless [ ref $arg ?  @$arg : 
-	(0,		# cursor for reading,
-	''.$arg)	# data string
+    bless [
+	0,		# cursor for reading,
+	''.$arg		# data string
     ], $class;
 }
 
-sub clear { my $_ = shift->_no_class; @$_[0,1] = (0, ''); return $_ }
+sub clear { my $_ = shift->_no_class; @$_[0,1] = (0, '') }
 sub Write { my $_ = shift->_no_class; $_->[1] .= shift }
+
+sub map_file {
+    #use File::Map qw(map_file);
+    my $_ = shift->_no_class;
+    my ($file, $start) = @_;
+    #map_file $_->[1], $file;
+    open my $fh, '<', $file;
+    $_->[1] = join '', <$fh>;
+    $_->[0] = $start;
+}
+sub seek_file { my $_ = shift->_no_class; $_->[0] = shift }
+sub Close { shift->clear } # close $_->[1] }
 
 sub read_string {
     my $_ = shift->_no_class;
@@ -52,7 +67,7 @@ sub read_bytes {
     my $_ = shift->_no_class;
     my $length = shift;
     die "buffer overflow" if $length > length($_->[1]) - $_->[0];
-    my $result = substr @$_[1,0], $length;
+    my $result = substr $_->[1], $_->[0], $length;
     $_->[0] += $length;
     return $result;
 }
@@ -96,7 +111,7 @@ sub _read_num {
     my $_ = shift->_no_class;
     my $format = shift;
     my $length = calc_size $format;
-    my $result = unpack $format, substr @$_[1,0], $length;
+    my $result = unpack $format, substr $_->[1], $_->[0], $length;
     $_->[0] += $length;
     return $result;
 }
@@ -132,6 +147,9 @@ Bitcoin::DataStream
 =head1 SYNOPSIS
 
     use Bitcoin::DataStream;
+
+    $ds = new Bitcoin::DataStream;
+    $ds->write_string("foo");
 
 =head1 DESCRIPTION
 
