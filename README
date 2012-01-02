@@ -11,4 +11,4 @@ modificator in s///
 Requires dc, the unix desktop calculator, as it is much faster than Math::BigInt, even
 with GMP.
 
-Requires BerkeleyDB, Perl6::Junction, Crypt::Rijndael
+Requires also: BerkeleyDB, Perl6::Junction, Crypt::Rijndael, File::Map
