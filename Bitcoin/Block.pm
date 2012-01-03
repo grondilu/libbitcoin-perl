@@ -31,15 +31,15 @@ sub new {
     elsif (@_ > 1 and @_ % 2 == 0) { new $class +{ @_ } }
     elsif ($arg =~ /^[a-f\d]+$/) {
 	Bitcoin::Database->import('blkindex');
-	my $cursor = tied(%Bitcoin::Database::blkindex)->db_cursor;
-	my $prefix = ord($_) . $_ for 'blockindex';
+	my $cursor = $Bitcoin::Database::blkindex->db_cursor;
+	my ($prefix,) = map chr(length). $_, 'blockindex';
 	my ($k, $v) = ($prefix, '');
 	my ($kds, $vds);
 	my ($nFile, $nBlockPos);
 	if ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) {
-	    my $k .= pack 'a*', reverse unpack 'a*', pack 'H*', $arg;
-	    die "no such block" unless exists $Bitcoin::Database::blkindex{$k};
-	    $v = $Bitcoin::Database::blkindex{$k};
+	    $k .= reverse pack 'H*', $arg;
+	    $cursor->c_get($k, $v, BerkeleyDB::DB_SET);
+	    die 'no such block' unless $v;
 	    die "block entry was removed" unless defined $v;
 	    $vds = new Bitcoin::DataStream $v;
 	    $vds->Read(Bitcoin::DataStream::INT32);  # version
@@ -49,22 +49,24 @@ sub new {
 	}
 	else {
 	    $cursor->c_get($k, $v, BerkeleyDB::DB_SET_RANGE);
-	    while ($k =~ /^$prefix/) {
-		($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
+	    my ($nHeight, $hash);
+	    do {
+		my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
 		$kds->read_string;
-		my $hash = unpack 'H*', reverse unpack 'a*', $kds->read_bytes(32);
+		$hash = unpack 'H*', reverse unpack 'a*', $kds->read_bytes(32);
 		$vds->Read(Bitcoin::DataStream::INT32);  # version
 		$vds->read_bytes(32);  # hashNext
 		$nFile        = $vds->Read(Bitcoin::DataStream::UINT32);
 		$nBlockPos    = $vds->Read(Bitcoin::DataStream::UINT32);
-		my $nHeight   = $vds->Read(Bitcoin::DataStream::INT32);
+		$nHeight   = $vds->Read(Bitcoin::DataStream::INT32);
 
-		last if $nHeight ~~ $arg or length($arg) > 8 and $hash =~ /$arg/;
-		die "no such block" if $cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
+		$cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
+		die "no such block (last inspected block was $hash)" if $k !~ /^$prefix/;
 	    }
+	    until $nHeight ~~ $arg or length($arg) > 8 and $hash =~ /$arg/;
 	}
 	return new $class Bitcoin::DataStream->new->map_file(
-	    Bitcoin::Database::DATA_DIR . sprintf('/blk%04.dat', $nFile),
+	    Bitcoin::Database::DATA_DIR . sprintf('/blk%04d.dat', $nFile),
 	    $nBlockPos
 	);
     }

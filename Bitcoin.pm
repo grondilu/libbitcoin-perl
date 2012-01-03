@@ -3,17 +3,19 @@ package Bitcoin;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(BASE58 BTC);
 
-use constant BTC =>  "\x{0243}";  # Ƀ
 use constant BASE58	=> qw{
       1 2 3 4 5 6 7 8 9
     A B C D E F G H   J K L M N   P Q R S T U V W X Y Z
     a b c d e f g h i j k   m n o p q r s t u v w x y z
 };
 
-use constant GENESIS => '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f';
-
 use constant {
-    PROOF_OF_WORK_LIMIT =>          32,
+    BTC                 =>  "\x{0243}",  # Ƀ
+    GENESIS             => '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f',
+    GENESIS_TEST    	=> '00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008',
+    TIMES20090103       => 'The Times 03/Jan/2009 Chancellor on brink of second bailout for banks',
+
+    PROOF_OF_WORK_LIMIT =>          32, # bits
     MAX_BLOCK_SIZE	=>   1_000_000,
     COIN		=> 100_000_000,
     CENT		=>   1_000_000,
@@ -37,22 +39,27 @@ sub hash {
 1;
 
 __END__
-static const unsigned int MAX_BLOCK_SIZE = 1000000;
-static const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2;
-static const int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50;
-static const int64 COIN = 100000000;
-static const int64 CENT = 1000000;
-static const int64 MIN_TX_FEE = 50000;
-static const int64 MIN_RELAY_TX_FEE = 10000;
-static const int64 MAX_MONEY = 21000000 * COIN;
-inline bool MoneyRange(int64 nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
-static const int COINBASE_MATURITY = 100;
-#ifdef USE_UPNP
-#static const int fHaveUPnP = true;
-##else
-#static const int fHaveUPnP = false;
-##endif
-#
+
+=begin comment
+
+    static const unsigned int MAX_BLOCK_SIZE = 1000000;
+    static const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2;
+    static const int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50;
+    static const int64 COIN = 100000000;
+    static const int64 CENT = 1000000;
+    static const int64 MIN_TX_FEE = 50000;
+    static const int64 MIN_RELAY_TX_FEE = 10000;
+    static const int64 MAX_MONEY = 21000000 * COIN;
+    inline bool MoneyRange(int64 nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
+    static const int COINBASE_MATURITY = 100;
+    #ifdef USE_UPNP
+    #static const int fHaveUPnP = true;
+    ##else
+    #static const int fHaveUPnP = false;
+    ##endif
+    #
+
+=end comment
 
 =head1 TITLE
 

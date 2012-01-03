@@ -49,7 +49,7 @@ sub new {
     my $arg = shift;
     bless [
 	0,		# reading cursor,
-	''.$arg		# data string
+	$arg // ''	# data string
     ], $class;
 }
 

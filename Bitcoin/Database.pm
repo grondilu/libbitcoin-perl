@@ -11,7 +11,8 @@ use BerkeleyDB;
 END { undef $BerkeleyDB::Term::Env; undef $BerkeleyDB::Term::Db }
 END { undef $BerkeleyDB::Term::Env; undef $BerkeleyDB::Term::Db }
 
-our (%blkindex,);
+our ($blkindex, %blkindex);
+END { undef $blkindex, untie %blkindex if defined $blkindex }
 
 our $Env = new BerkeleyDB::Env  
     -Home => DATA_DIR,
@@ -26,8 +27,8 @@ sub import {
 	use Perl6::Junction qw(none);
 	for (@_) {
 	    next if $_ eq none qw(blkindex);
-	    unless (tied %blkindex) {
-		tie %blkindex, 'BerkeleyDB::Btree',
+	    unless (defined $blkindex) {
+		$blkindex = tie %blkindex, 'BerkeleyDB::Btree',
 		-Filename => $_.'.dat',
 		-Subname  => 'main',
 		-Env      => $Env,
