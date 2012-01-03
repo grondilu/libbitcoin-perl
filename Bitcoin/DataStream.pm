@@ -61,6 +61,7 @@ sub map_file {
     my ($file, $start) = @_;
     $_->[0] = $start;
     File::Map::map_file $_->[1], $file;
+    return $_;
 }
 sub seek_file { my $_ = shift->_no_class; $_->[0] = shift }
 sub close_file { undef shift->_no_class->[1] }

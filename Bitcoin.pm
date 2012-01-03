@@ -10,8 +10,10 @@ use constant BASE58	=> qw{
     a b c d e f g h i j k   m n o p q r s t u v w x y z
 };
 
+use constant GENESIS => '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f';
+
 use constant {
-    # more boring stuff
+    PROOF_OF_WORK_LIMIT =>          32,
     MAX_BLOCK_SIZE	=>   1_000_000,
     COIN		=> 100_000_000,
     CENT		=>   1_000_000,
@@ -82,6 +84,8 @@ It currently contains:
 =item * the base-58 charset (C<BASE58> list constant);
 
 =item * hash functions such as C<hash160> which is actually a SHA-256 followed by a RIPEMD-160 ;
+
+=item * The genesis hash code
 
 =back
 
