@@ -6,6 +6,7 @@ use warnings;
 use Bitcoin;
 use Bitcoin::Database;
 use Bitcoin::DataStream;
+use Bitcoin::Transaction;
 
 sub _no_class;
 sub _no_instance;
@@ -16,13 +17,18 @@ sub new {
     if (ref $arg eq 'Bitcoin::DataStream') {
 	my $this = bless +{
 	    version        => $arg->Read(Bitcoin::DataStream::INT32),
-	    hashPrev       => $arg->read_bytes(32),
-	    hashMerkleRoot => $arg->read_bytes(32),
+	    hashPrev       => unpack('H*', $arg->read_bytes(32)),
+	    hashMerkleRoot => unpack('H*', $arg->read_bytes(32)),
 	    nTime          => $arg->Read(Bitcoin::DataStream::UINT32),
 	    nBits          => $arg->Read(Bitcoin::DataStream::UINT32),
 	    nNonce         => $arg->Read(Bitcoin::DataStream::UINT32),
 	}, $class;
 	$this->check_proof_of_work;
+
+	if ($this->{version} & (1 << 8)) {...}
+	$this->{transactions} = [
+	    map { new Bitcoin::Transaction $arg } 1 .. $arg->read_compact_size
+	];
 	return $this;
     }
     elsif (ref $arg eq 'HASH') {
@@ -81,8 +87,8 @@ sub header {
     my $this = shift->_no_class;
     pack 
     Bitcoin::DataStream::INT32 .
-    'a32' .
-    'a32' .
+    'H64' .
+    'H64' .
     Bitcoin::DataStream::UINT32 .
     Bitcoin::DataStream::UINT32 .
     Bitcoin::DataStream::UINT32 ,
@@ -90,10 +96,17 @@ sub header {
 }
 
 sub check_proof_of_work {
-    use bigint;
-    my $_ = shift->_no_class;
-    die "nBits is below minimum work" if $_->{nBits} < Bitcoin::PROOF_OF_WORK_LIMIT;
-    die "hash doesn't match nBits" if 2**(256-$_->{nBits}) - 1 < hex unpack 'H*', Bitcoin::hash $_->header;
+    my $_ = shift;
+    if (ref) { ref->check_proof_of_work($_->header, $_->{nBits}) }
+    else {
+	use integer;
+	use bigint;
+	my ($header, $nBits) = @_;
+	my @n = map hex($_), +(0+$nBits)->as_hex  =~ /0x(..)(..)(..)(..)/;
+	my $target = (($n[1]*256 + $n[2])*256 +$n[3]) * 256**($n[0] - 3);
+	die "target doesn't provide minimum work" if $target > 2**(256 - Bitcoin::PROOF_OF_WORK_LIMIT) - 1;
+	die "hash doesn't match nBits" if $target < hex unpack 'H*', reverse unpack 'a*', Bitcoin::hash $header;
+    }
 }
 
 1;
