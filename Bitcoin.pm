@@ -31,17 +31,14 @@ sub hash160 {
     /;
 }
 
-sub hash {
+sub hash;
+sub hash_hex;
+{
     use Digest::SHA qw(sha256);
-    sha256 sha256 shift;
+    sub hash     { sha256 sha256 shift }
+    sub hash_hex { unpack 'H*', reverse hash shift }
 }
 
-package Bitcoin::Hash;
-sub new {
-    my $class = shift; die 'instance method call not implemented' if ref $class;
-    bless [ Bitcoin::hash shift ], $class;
-}
-use overload q("") => sub { pack 'H*', reverse shift->[0] };
 
 1;
 

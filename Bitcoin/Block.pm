@@ -17,12 +17,12 @@ sub new {
     if (ref $arg eq 'Bitcoin::DataStream') {
 	my $this = bless({
 	    version        => $arg->Read(Bitcoin::DataStream::INT32),
-	    hashPrev       => unpack('H*', $arg->read_bytes(32)),
-	    hashMerkleRoot => unpack('H*', $arg->read_bytes(32)),
+	    hashPrev       => unpack('H*', reverse $arg->read_bytes(32)),
+	    hashMerkleRoot => unpack('H*', reverse $arg->read_bytes(32)),
 	    nTime          => $arg->Read(Bitcoin::DataStream::UINT32),
 	    nBits          => $arg->Read(Bitcoin::DataStream::UINT32),
 	    nNonce         => $arg->Read(Bitcoin::DataStream::UINT32),
-	}, $class)->check_proof_of_work;
+	}, $class);#->check_proof_of_work;
 
 	if ($this->{version} & (1 << 8)) {...}
 
@@ -91,14 +91,15 @@ sub _no_class    { my $_ = shift; die "class method call not implemented" unless
 
 sub header {
     my $this = shift->_no_class;
-    pack 
-    Bitcoin::DataStream::INT32 .
-    'H64' .
-    'H64' .
+    pack
+    Bitcoin::DataStream::INT32  .
+    'a32a32' .
     Bitcoin::DataStream::UINT32 .
     Bitcoin::DataStream::UINT32 .
     Bitcoin::DataStream::UINT32 ,
-    map $this->{$_}, qw(version hashPrev hashMerkleRoot nTime nBits nNonce);
+    $this->{version},
+    ( map { scalar reverse pack 'H64', $this->{$_} } qw(hashPrev hashMerkleRoot) ),
+    map $this->{$_}, qw(nTime nBits nNonce);
 }
 
 sub serialize {
@@ -118,7 +119,7 @@ sub check_proof_of_work {
 	my ($size, $n) = map hex($_), (0+$nBits)->as_hex  =~ /0x(..)(.{6})/;
 	my $target = $n * 256**($size - 3);
 	die "target doesn't provide minimum work" if $target > 2**(256 - Bitcoin::PROOF_OF_WORK_LIMIT) - 1;
-	die "hash doesn't match nBits" if $target < hex unpack 'H*', reverse Bitcoin::hash $header;
+	die "hash doesn't match nBits" if $target < hex Bitcoin::hash_hex $header;
     }
 }
 
