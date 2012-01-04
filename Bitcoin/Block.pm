@@ -16,15 +16,22 @@ sub new {
     my $arg = $_[0];
     if (ref $arg eq 'Bitcoin::DataStream') {
 	my $this = bless({
-	    version        => $arg->Read(Bitcoin::DataStream::INT32),
-	    hashPrev       => unpack('H*', reverse $arg->read_bytes(32)),
-	    hashMerkleRoot => unpack('H*', reverse $arg->read_bytes(32)),
-	    nTime          => $arg->Read(Bitcoin::DataStream::UINT32),
-	    nBits          => $arg->Read(Bitcoin::DataStream::UINT32),
-	    nNonce         => $arg->Read(Bitcoin::DataStream::UINT32),
-	}, $class)->check_proof_of_work;
+		version        => $arg->Read(Bitcoin::DataStream::INT32),
+		hashPrev       => unpack('H*', reverse $arg->read_bytes(32)),
+		hashMerkleRoot => unpack('H*', reverse $arg->read_bytes(32)),
+		nTime          => $arg->Read(Bitcoin::DataStream::UINT32),
+		nBits          => $arg->Read(Bitcoin::DataStream::UINT32),
+		nNonce         => $arg->Read(Bitcoin::DataStream::UINT32),
+	    }, $class)->check_proof_of_work;
 
-	if ($this->{version} & (1 << 8)) {...}
+	return $this if $class =~ /::HEADER$/;
+
+	if ($this->{version} & (1 << 8)) {
+	    my $merkle_tx = new Bitcoin::Transaction $arg;
+	    $merkle_tx->{chainMerkleBranch} = $arg->read_bytes(32*$arg->read_compact_size);
+	    $merkle_tx->{chainIndex} = $arg->Read(Bitcoin::DataStream::INT32);
+	    $merkle_tx->{parentBlock} = new $class.'::HEADER' $arg;
+	}
 
 	$this->{transactions} = [
 	    map { new Bitcoin::Transaction $arg } 1 .. $arg->read_compact_size
@@ -133,6 +140,9 @@ sub check_proof_of_work {
 	die "hash doesn't match nBits" if $target < hex Bitcoin::hash_hex $header;
     }
 }
+
+package Bitcoin::Block::HEADER;
+our @ISA = qw(Bitcoin::Block);
 
 1;
 
