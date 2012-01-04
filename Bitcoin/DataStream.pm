@@ -46,10 +46,10 @@ sub _no_instance;
 #
 sub new {
     my $class = shift->_no_instance;
-    my $arg = shift;
+    my $arg = shift // '';
     bless [
 	0,		# reading cursor,
-	$arg // ''	# data string
+	$arg      	# data string
     ], $class;
 }
 
@@ -81,7 +81,7 @@ sub Write {
     my $what_to_write = shift;
     my $arg = shift;
     return $_->write_string($arg) if $what_to_write eq STRING;
-    $_->[1] .= pack $what_to_write, $arg;
+    $_->[1] .= defined $arg ? pack $what_to_write, $arg : $what_to_write;
 }
 
 sub read_string {
@@ -126,7 +126,7 @@ sub write_compact_size {
     else                { $_->[1] .= "\xff" . pack UINT64, shift }
 }
 
-sub Length { scalar unpack 'a*', shift }
+sub Length { scalar map 1, shift =~ /./msg }
 sub calc_size {
     my $_ = shift;
     /c/i ? 1 :

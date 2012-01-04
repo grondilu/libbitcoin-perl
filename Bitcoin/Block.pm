@@ -26,6 +26,7 @@ sub new {
 	$this->check_proof_of_work;
 
 	if ($this->{version} & (1 << 8)) {...}
+
 	$this->{transactions} = [
 	    map { new Bitcoin::Transaction $arg } 1 .. $arg->read_compact_size
 	];
@@ -95,9 +96,17 @@ sub header {
     map $this->{$_}, qw(version hashPrev hashMerkleRoot nTime nBits nNonce);
 }
 
+sub serialize {
+    my $this = shift->_no_class;
+    return
+    $this->header .
+    ($this->{version} & (1 << 8) ? do {...} : '') .
+    join '', map $_->serialize, @{$_->{transactions}};
+}
+
 sub check_proof_of_work {
     my $_ = shift;
-    if (ref) { ref->check_proof_of_work($_->header, $_->{nBits}) }
+    if (ref) { ref->check_proof_of_work($_->header, $_->{nBits}); return $_ }
     else {
 	use integer;
 	use bigint;
@@ -138,7 +147,7 @@ Bitcoin::Block
 This class encapsulates a bitcoin block.
 
 When a hash, a partial hash, or a block number is provided, the constructor opens the bitcoin
-database and search for the corresponding block.
+database and searches for the corresponding block.
 
 =head1 AUTHOR
 
