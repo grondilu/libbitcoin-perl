@@ -36,42 +36,48 @@ sub new {
 	...
     }
     elsif (@_ > 1 and @_ % 2 == 0) { new $class +{ @_ } }
-    elsif ($arg =~ /^[a-f\d]+$/) {
+    elsif ($arg =~ /^[a-f\d]+$/ or ref $arg eq 'Regexp') {
 	Bitcoin::Database->import('blkindex');
 	my $cursor = $Bitcoin::Database::blkindex->db_cursor;
 	my ($prefix,) = map chr(length). $_, 'blockindex';
 	my ($k, $v) = ($prefix, '');
-	my ($kds, $vds);
 	my ($nFile, $nBlockPos);
 	if ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) {
 	    $k .= reverse pack 'H*', $arg;
 	    $cursor->c_get($k, $v, BerkeleyDB::DB_SET);
-	    die 'no such block' unless $v;
+	    if ($cursor->status) {
+		# trying the hash in reverse order
+		$k = $prefix . reverse pack 'H*', reverse $arg;
+		$cursor->c_get($k, $v, BerkeleyDB::DB_SET);
+	    }
+	    die 'no such block' if $cursor->status;
 	    die "block entry was removed" unless defined $v;
-	    $vds = new Bitcoin::DataStream $v;
+	    my $vds = new Bitcoin::DataStream $v;
 	    $vds->Read(Bitcoin::DataStream::INT32);  # version
 	    $vds->read_bytes(32);  # hashNext
 	    $nFile        = $vds->Read(Bitcoin::DataStream::UINT32);
 	    $nBlockPos    = $vds->Read(Bitcoin::DataStream::UINT32);
 	}
-	else {
-	    $cursor->c_get($k, $v, BerkeleyDB::DB_SET_RANGE);
-	    my ($nHeight, $hash);
-	    do {
-		my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
-		$kds->read_string;
-		$hash = unpack 'H*', reverse unpack 'a*', $kds->read_bytes(32);
-		$vds->Read(Bitcoin::DataStream::INT32);  # version
-		$vds->read_bytes(32);  # hashNext
-		$nFile        = $vds->Read(Bitcoin::DataStream::UINT32);
-		$nBlockPos    = $vds->Read(Bitcoin::DataStream::UINT32);
-		$nHeight   = $vds->Read(Bitcoin::DataStream::INT32);
-
-		$cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
-		die "no such block (last inspected block was $hash)" if $k !~ /^$prefix/;
+	elsif ($arg =~ /^\d+$/ or ref $arg eq 'Regexp') {
+	    SEARCH: {
+		$cursor->c_get($k, $v, BerkeleyDB::DB_SET_RANGE);
+		do {
+		    my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
+		    $kds->read_string;
+		    my $hash = unpack 'H*', reverse $kds->read_bytes(32);
+		    $vds->Read(Bitcoin::DataStream::INT32);  # version
+		    $vds->read_bytes(32);  # hashNext
+		    $nFile        = $vds->Read(Bitcoin::DataStream::UINT32);
+		    $nBlockPos    = $vds->Read(Bitcoin::DataStream::UINT32);
+		    last SEARCH if ref $arg eq 'Regexp' and $hash ~~ $arg;
+		    my $nHeight   = $vds->Read(Bitcoin::DataStream::INT32);
+		    last SEARCH if $arg =~ /^\d+$/ and $nHeight == $arg;
+		}
+		until $cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
+		die "no such block";
 	    }
-	    until $nHeight ~~ $arg or length($arg) > 8 and $hash =~ /$arg/;
 	}
+	else { die 'wrong argument format' }
 	return new $class Bitcoin::DataStream->new->map_file(
 	    Bitcoin::Database::DATA_DIR . sprintf('/blk%04d.dat', $nFile),
 	    $nBlockPos
@@ -108,11 +114,10 @@ sub check_proof_of_work {
     my $_ = shift;
     if (ref) { ref->check_proof_of_work($_->header, $_->{nBits}); return $_ }
     else {
-	use integer;
 	use bigint;
 	my ($header, $nBits) = @_;
-	my @n = map hex($_), +(0+$nBits)->as_hex  =~ /0x(..)(..)(..)(..)/;
-	my $target = (($n[1]*256 + $n[2])*256 +$n[3]) * 256**($n[0] - 3);
+	my ($size, $n) = map hex($_), (0+$nBits)->as_hex  =~ /0x(..)(.{6})/;
+	my $target = $n * 256**($size - 3);
 	die "target doesn't provide minimum work" if $target > 2**(256 - Bitcoin::PROOF_OF_WORK_LIMIT) - 1;
 	die "hash doesn't match nBits" if $target < hex unpack 'H*', reverse unpack 'a*', Bitcoin::hash $header;
     }
