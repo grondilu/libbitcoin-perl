@@ -15,15 +15,14 @@ sub new {
     my $class = shift->_no_instance;
     my $arg = $_[0];
     if (ref $arg eq 'Bitcoin::DataStream') {
-	my $this = bless +{
+	my $this = bless({
 	    version        => $arg->Read(Bitcoin::DataStream::INT32),
 	    hashPrev       => unpack('H*', $arg->read_bytes(32)),
 	    hashMerkleRoot => unpack('H*', $arg->read_bytes(32)),
 	    nTime          => $arg->Read(Bitcoin::DataStream::UINT32),
 	    nBits          => $arg->Read(Bitcoin::DataStream::UINT32),
 	    nNonce         => $arg->Read(Bitcoin::DataStream::UINT32),
-	}, $class;
-	$this->check_proof_of_work;
+	}, $class)->check_proof_of_work;
 
 	if ($this->{version} & (1 << 8)) {...}
 
@@ -47,7 +46,7 @@ sub new {
 	    $cursor->c_get($k, $v, BerkeleyDB::DB_SET);
 	    if ($cursor->status) {
 		# trying the hash in reverse order
-		$k = $prefix . reverse pack 'H*', reverse $arg;
+		$k = $prefix . pack 'H*', $arg;
 		$cursor->c_get($k, $v, BerkeleyDB::DB_SET);
 	    }
 	    die 'no such block' if $cursor->status;
@@ -79,7 +78,7 @@ sub new {
 	}
 	else { die 'wrong argument format' }
 	return new $class Bitcoin::DataStream->new->map_file(
-	    Bitcoin::Database::DATA_DIR . sprintf('/blk%04d.dat', $nFile),
+	    sprintf('%s/blk%04d.dat', Bitcoin::Database::DATA_DIR, $nFile),
 	    $nBlockPos
 	);
     }
@@ -119,7 +118,7 @@ sub check_proof_of_work {
 	my ($size, $n) = map hex($_), (0+$nBits)->as_hex  =~ /0x(..)(.{6})/;
 	my $target = $n * 256**($size - 3);
 	die "target doesn't provide minimum work" if $target > 2**(256 - Bitcoin::PROOF_OF_WORK_LIMIT) - 1;
-	die "hash doesn't match nBits" if $target < hex unpack 'H*', reverse unpack 'a*', Bitcoin::hash $header;
+	die "hash doesn't match nBits" if $target < hex unpack 'H*', reverse Bitcoin::hash $header;
     }
 }
 
@@ -135,8 +134,8 @@ Bitcoin::Block
 
     use Bitcoin::Block;
 
-    my $block = new Bitcoin::Block 121899;
-    my $block = new Bitcoin::Block '32fca6b8';
+    my $block = new Bitcoin::Block 121_899;
+    my $block = new Bitcoin::Block qr/^0+32fca6b8/';
     my $block = new Bitcoin::Block $binary_block;
     my $block = new Bitcoin::Block -prevHash => '0x.....', -MerkleRoot => '.....', ...  ;
     my $block = new Bitcoin::Block { prevHash => '0x.....', MerkleRoot => '.....', ... } ;
@@ -151,7 +150,7 @@ Bitcoin::Block
 
 This class encapsulates a bitcoin block.
 
-When a hash, a partial hash, or a block number is provided, the constructor opens the bitcoin
+When a hash, a regex, or a block number is provided, the constructor opens the bitcoin
 database and searches for the corresponding block.
 
 =head1 AUTHOR

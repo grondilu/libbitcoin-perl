@@ -239,3 +239,30 @@ use constant {
 };                              
                                 
 1;
+
+__END__
+
+=head1 TITLE
+
+Bitcoin::Script
+
+=head1 SYNOPSIS
+
+    use Bitcoin::Script;
+
+=head1 DESCRIPTION
+
+This module describes the internal bitcoin scripting language.
+
+=head1 AUTHOR
+
+L Grondin <grondilu@yahoo.fr>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2011, Lucien Grondin.  All rights reserved.  
+
+This library is free software; you can redistribute it and/or modify it under 
+the same terms as Perl itself (L<perlgpl>, L<perlartistic>).
+
+=cut

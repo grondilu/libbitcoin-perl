@@ -36,6 +36,13 @@ sub hash {
     sha256 sha256 shift;
 }
 
+package Bitcoin::Hash;
+sub new {
+    my $class = shift; die 'instance method call not implemented' if ref $class;
+    bless [ Bitcoin::hash shift ], $class;
+}
+use overload q("") => sub { pack 'H*', reverse shift->[0] };
+
 1;
 
 __END__

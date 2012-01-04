@@ -1,50 +1,50 @@
 
-Bitcoin/DataStream.pm,2167
+DataStream.pm,2171
 package Bitcoin::DataStream;Bitcoin::DataStream2,16
 sub new {new47,710
-sub clear { my $_ = shift->_no_class; @$_[0,1] = (0, '') }clear56,857
-sub map_file {map_file58,917
-sub seek_file { my $_ = shift->_no_class; $_->[0] = shift }seek_file66,1089
-sub close_file { undef shift->_no_class->[1] }close_file67,1149
-sub Read {Read69,1197
-sub Write {Write79,1485
-sub read_string {read_string87,1687
-sub write_string {write_string94,1856
-sub read_bytes {read_bytes101,2000
-sub read_compact_size {read_compact_size110,2235
-sub write_compact_size {write_compact_size119,2519
-sub Length { scalar unpack 'a*', shift }Length129,2897
-sub calc_size {calc_size130,2938
-sub _no_class    { my $_ = shift; die "class method not implemented"    unless ref; return $_ }_no_class141,3083
-sub _no_instance { my $_ = shift; die "instance method not implemented" if ref;     return $_ }_no_instance142,3179
-sub _read_num {_read_num144,3276
-sub _write_num {_write_num153,3496
-sub read_boolean  { return substr(shift->read_bytes(1), 0, 1) ne chr 0 }read_boolean162,3648
-sub read_int16    { return shift->_read_num('s') }read_int16163,3721
-sub read_uint16   { return shift->_read_num('S') }read_uint16164,3772
-sub read_int32    { return shift->_read_num('l') }read_int32165,3823
-sub read_uint32   { return shift->_read_num('L') }read_uint32166,3874
-sub read_int64    { return shift->_read_num('q') }read_int64167,3925
-sub read_uint64   { return shift->_read_num('Q') }read_uint64168,3976
-sub write_boolean { my $_ = shift; return $_->[1] .= chr(shift() ? 1 : 0 ) }write_boolean170,4028
-sub write_int16   { my $_ = shift; return $_->_write_num('s', shift) }write_int16171,4105
-sub write_uint16  { my $_ = shift; return $_->_write_num('S', shift) }write_uint16172,4176
-sub write_int32   { my $_ = shift; return $_->_write_num('l', shift) }write_int32173,4247
-sub write_uint32  { my $_ = shift; return $_->_write_num('L', shift) }write_uint32174,4318
-sub write_int64   { my $_ = shift; return $_->_write_num('q', shift) }write_int64175,4389
-sub write_uint64  { my $_ = shift; return $_->_write_num('Q', shift) }write_uint64176,4460
+sub clear { my $_ = shift->_no_class; @$_[0,1] = (0, '') }clear56,863
+sub map_file {map_file58,923
+sub seek_file { my $_ = shift->_no_class; $_->[0] = shift }seek_file66,1095
+sub close_file { undef shift->_no_class->[1] }close_file67,1155
+sub Read {Read69,1203
+sub Write {Write79,1491
+sub read_string {read_string87,1725
+sub write_string {write_string94,1894
+sub read_bytes {read_bytes101,2038
+sub read_compact_size {read_compact_size110,2273
+sub write_compact_size {write_compact_size119,2557
+sub Length { scalar map 1, shift =~ /./msg }Length129,2935
+sub calc_size {calc_size130,2980
+sub _no_class    { my $_ = shift; die "class method not implemented"    unless ref; return $_ }_no_class141,3125
+sub _no_instance { my $_ = shift; die "instance method not implemented" if ref;     return $_ }_no_instance142,3221
+sub _read_num {_read_num144,3318
+sub _write_num {_write_num153,3538
+sub read_boolean  { return substr(shift->read_bytes(1), 0, 1) ne chr 0 }read_boolean162,3690
+sub read_int16    { return shift->_read_num('s') }read_int16163,3763
+sub read_uint16   { return shift->_read_num('S') }read_uint16164,3814
+sub read_int32    { return shift->_read_num('l') }read_int32165,3865
+sub read_uint32   { return shift->_read_num('L') }read_uint32166,3916
+sub read_int64    { return shift->_read_num('q') }read_int64167,3967
+sub read_uint64   { return shift->_read_num('Q') }read_uint64168,4018
+sub write_boolean { my $_ = shift; return $_->[1] .= chr(shift() ? 1 : 0 ) }write_boolean170,4070
+sub write_int16   { my $_ = shift; return $_->_write_num('s', shift) }write_int16171,4147
+sub write_uint16  { my $_ = shift; return $_->_write_num('S', shift) }write_uint16172,4218
+sub write_int32   { my $_ = shift; return $_->_write_num('l', shift) }write_int32173,4289
+sub write_uint32  { my $_ = shift; return $_->_write_num('L', shift) }write_uint32174,4360
+sub write_int64   { my $_ = shift; return $_->_write_num('q', shift) }write_int64175,4431
+sub write_uint64  { my $_ = shift; return $_->_write_num('Q', shift) }write_uint64176,4502
 
-Bitcoin/Script.pm,46
+Script.pm,46
 package Bitcoin::Script;Bitcoin::Script2,16
 
-Bitcoin/Electrum.pm,192
+Electrum.pm,192
 package Bitcoin::Electrum;Bitcoin::Electrum2,19
 use constant COMMANDS => qw(COMMANDS5,59
 use constant DEFAULT => {DEFAULT10,209
 sub py2json {py2json26,570
 sub json2py {json2py31,717
 
-Bitcoin/Address.pm,382
+Address.pm,382
 package Bitcoin::Address;Bitcoin::Address2,19
 sub size { 160 }size26,349
 sub default_version { Bitcoin::TEST ? 1 : 0 }default_version27,366
@@ -56,27 +56,28 @@ sub default_version { Bitcoin::TEST ? 1 : 0 }default_version27,366
 sub version {version108,2610
 sub value {value113,2709
 
-Bitcoin/Block.pm,382
+Block.pm,417
 package Bitcoin::Block;Bitcoin::Block2,19
-sub new {new13,166
-sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance77,2534
-sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class78,2632
-sub header {header80,2731
-sub check_proof_of_work {check_proof_of_work92,3026
+sub new {new14,192
+sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance84,2733
+sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class85,2831
+sub header {header87,2930
+sub serialize {serialize99,3225
+sub check_proof_of_work {check_proof_of_work107,3415
 
-Bitcoin/Wallet.pm,117
+Wallet.pm,117
 package Bitcoin::Wallet;Bitcoin::Wallet2,19
 sub FETCH {FETCH13,181
 sub STORE {STORE20,364
 sub add {add29,799
 
-Bitcoin/template.pm,41
+template.pm,41
 package Bitcoin::NAMEBitcoin::NAME2,16
 
-Bitcoin/Network/CAddress.pm,67
+Network/CAddress.pm,67
 package Bitcoin::Network::CAddressBitcoin::Network::CAddress2,16
 
-Bitcoin/Electrum/Wallet.pm,480
+Electrum/Wallet.pm,480
 package Bitcoin::Electrum::Wallet;Bitcoin::Electrum::Wallet2,19
 use constant VERSION => 2;VERSION18,359
 use constant TEMPLATE => {TEMPLATE19,386
@@ -90,24 +91,24 @@ sub is_mine {is_mine105,2912
 sub is_change {is_change110,3047
 sub get_new_address {get_new_address116,3200
 
-Bitcoin/Electrum/Client/GUI/GTK.pm,86
+Electrum/Client/GUI/GTK.pm,86
 package Bitcoin::Electrum::Client::GUI::GTK;Bitcoin::Electrum::Client::GUI::GTK2,19
 
-Bitcoin/Electrum/Client/GUI.pm,76
+Electrum/Client/GUI.pm,76
 package Bitcoin::Electrum::Client::GUI;Bitcoin::Electrum::Client::GUI2,19
 
-Bitcoin/Electrum/Mnemonic.pm,124
+Electrum/Mnemonic.pm,124
 package Bitcoin::Electrum::Mnemonic;Bitcoin::Electrum::Mnemonic2,16
 sub encode {encode10,189
 sub decode {decode22,451
 
-Bitcoin/Electrum/Client.pm,148
+Electrum/Client.pm,148
 package Bitcoin::Electrum::Client;Bitcoin::Electrum::Client9,247
 sub raw_tx {raw_tx31,600
 sub mktx {mktx81,1858
 sub request {request87,1932
 
-Bitcoin/PrivateKey.pm,593
+PrivateKey.pm,593
 package Bitcoin::PrivateKey;Bitcoin::PrivateKey2,16
 use constant G => secp256k1->{G};G18,375
 use constant DUMMY_PASSWD => 'dummy password';DUMMY_PASSWD21,444
@@ -124,80 +125,19 @@ sub decrypt {decrypt82,1779
     sub address {address118,2669
     sub _value_from_PEM {_value_from_PEM125,2842
 
-Bitcoin/Database.pm,140
+Database.pm,140
 package Bitcoin::Database;Bitcoin::Database2,16
 use constant DATA_DIR => $ENV{HOME}.'/.bitcoin';DATA_DIR7,81
 sub import {import22,610
 
-Bitcoin/Transaction.pm,56
+Transaction.pm,346
 package Bitcoin::Transaction;Bitcoin::Transaction2,16
+sub new {new12,146
+sub serialize {serialize42,1124
+sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance61,2206
+sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class62,2304
 
-Bitcoin/Base58.pm,241
+Base58.pm,241
 package Bitcoin::Base58;Bitcoin::Base583,58
     sub decode { shift =~ m/.$/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }decode20,297
     sub encode { my $_ = shift; return encode($_/58) . (BASE58)[$_%58] if $_ > 0 } encode21,380
-
-EC/Curves.pm,81
-package EC::Curves;EC::Curves3,42
-use constant secp256k1 => {secp256k112,222
-
-EC/DSA/PrivateKey.pm,98
-package EC::DSA::PrivateKey;EC::DSA::PrivateKey2,16
-sub new {new10,123
-sub sign {sign16,404
-
-EC/DSA/PublicKey.pm,104
-package EC::DSA::PublicKey;EC::DSA::PublicKey2,16
-sub new {new10,122
-sub verifies {verifies17,468
-
-EC/DSA.pm,196
-package EC::DSA;EC::DSA2,16
-sub int_to_string {int_to_string9,93
-sub string_to_int {string_to_int13,243
-sub point_is_valid {point_is_valid18,350
-sub digest_integer {digest_integer25,572
-
-Bitcoin.pm,121
-package Bitcoin;Bitcoin2,19
-use constant BASE58	=> qw{BASE586,87
-sub hash160 {hash16026,798
-sub hash {hash34,965
-
-PadWalker.pm,33
-package PadWalker;PadWalker1,0
-
-EC.pm,285
-package EC;EC3,49
-sub set_param {set_param19,232
-    sub Delta { -16*(4*$a**3 + 27*$b**2) }Delta27,364
-    sub check {check28,407
-    sub Cmp {Cmp37,747
-    sub double {double41,877
-    sub add {add48,1114
-    sub mult {mult59,1544
-package EC::Point;EC::Point77,2003
-
-File/Map.pm,304
-package File::Map;File::Map1,0
-sub _check_layers {_check_layers55,1498
-sub _get_offset_length {_get_offset_length64,1748
-sub map_handle {map_handle77,2080
-sub map_file {map_file86,2391
-sub map_anonymous {map_anonymous104,3059
-sub sys_map {    ## no critic (ProhibitManyArgs)sys_map113,3391
-
-PerlIO/Layers.pm,272
-package PerlIO::Layers;PerlIO::Layers9,242
-sub _names_to_flags {_names_to_flags29,622
-sub _flag_names {_flag_names33,700
-sub _has_flags {_has_flags38,803
-sub _is_kind {_is_kind53,1170
-sub query_handle {query_handle110,2815
-sub get_layers {get_layers116,3002
-
-NumberTheory.pm,147
-package NumberTheory;NumberTheory2,16
-use constant DC_REGISTERS => 'DC_REGISTERS13,190
-sub dc {dc28,435
-sub inverse_mod {inverse_mod37,622

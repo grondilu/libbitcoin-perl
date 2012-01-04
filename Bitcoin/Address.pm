@@ -130,8 +130,6 @@ Bitcoin::Address
     use Bitcoin::Address;
 
     # basic instanciation
-    my $addr = Bitcoin::Address->new('1DxH3bjYeCKbSKvVEsXQUBjsTcxagmWjHy');
-    # (indirect object syntax)
     my $addr = new Bitcoin::Address '1DxH3bjYeCKbSKvVEsXQUBjsTcxagmWjHy';
 
     # conversion to Hex is always 40 nibbles long, with no leading '0x'
