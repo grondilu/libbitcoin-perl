@@ -22,7 +22,7 @@ sub new {
 	    nTime          => $arg->Read(Bitcoin::DataStream::UINT32),
 	    nBits          => $arg->Read(Bitcoin::DataStream::UINT32),
 	    nNonce         => $arg->Read(Bitcoin::DataStream::UINT32),
-	}, $class);#->check_proof_of_work;
+	}, $class)->check_proof_of_work;
 
 	if ($this->{version} & (1 << 8)) {...}
 
@@ -100,6 +100,17 @@ sub header {
     $this->{version},
     ( map { scalar reverse pack 'H64', $this->{$_} } qw(hashPrev hashMerkleRoot) ),
     map $this->{$_}, qw(nTime nBits nNonce);
+}
+
+sub unbless {
+    my $this = shift;
+    +{
+	map {
+	$_ => $_ eq 'transactions' ?
+	[ map { %$_ } @{$this->{$_}} ] :
+	$this->{$_}
+	} keys %$this
+    }
 }
 
 sub serialize {
