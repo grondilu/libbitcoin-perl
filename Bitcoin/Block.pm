@@ -30,7 +30,7 @@ sub new {
 	    my $merkle_tx = new Bitcoin::Transaction $arg;
 	    $merkle_tx->{chainMerkleBranch} = $arg->read_bytes(32*$arg->read_compact_size);
 	    $merkle_tx->{chainIndex} = $arg->Read(Bitcoin::DataStream::INT32);
-	    $merkle_tx->{parentBlock} = new $class.'::HEADER' $arg;
+	    $merkle_tx->{parentBlock} = ($class.'::HEADER')->new($arg);
 	}
 
 	$this->{transactions} = [
@@ -65,22 +65,26 @@ sub new {
 	    $nBlockPos    = $vds->Read(Bitcoin::DataStream::UINT32);
 	}
 	elsif ($arg =~ /^\d+$/ or ref $arg eq 'Regexp') {
+	    my @result;
 	    SEARCH: {
 		$cursor->c_get($k, $v, BerkeleyDB::DB_SET_RANGE);
 		do {
 		    my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
 		    $kds->read_string;
 		    my $hash = unpack 'H*', reverse $kds->read_bytes(32);
-		    $vds->Read(Bitcoin::DataStream::INT32);  # version
-		    $vds->read_bytes(32);  # hashNext
-		    $nFile        = $vds->Read(Bitcoin::DataStream::UINT32);
-		    $nBlockPos    = $vds->Read(Bitcoin::DataStream::UINT32);
-		    last SEARCH if ref $arg eq 'Regexp' and $hash ~~ $arg;
-		    my $nHeight   = $vds->Read(Bitcoin::DataStream::INT32);
-		    last SEARCH if $arg =~ /^\d+$/ and $nHeight == $arg;
-		}
-		until $cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
-		die "no such block";
+		    if (ref $arg eq 'Regexp') { push @result, $hash if $hash =~ $arg }
+		    else {
+			$vds->Read(Bitcoin::DataStream::INT32);  # version
+			$vds->read_bytes(32);  # hashNext
+			$nFile        = $vds->Read(Bitcoin::DataStream::UINT32);
+			$nBlockPos    = $vds->Read(Bitcoin::DataStream::UINT32);
+			my $nHeight   = $vds->Read(Bitcoin::DataStream::INT32);
+			last SEARCH if $nHeight == $arg;
+		    }
+		} until $cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
+		if (@result > 1) { return map { ($class.'::HEADER')->new($_) } @result }
+		elsif (@result == 1) { return new $class shift @result }
+		die "no such result";
 	    }
 	}
 	else { die 'wrong argument format' }
@@ -157,23 +161,26 @@ Bitcoin::Block
     use Bitcoin::Block;
 
     my $block = new Bitcoin::Block 121_899;
-    my $block = new Bitcoin::Block qr/^0+32fca6b8/';
+    my $block = new Bitcoin::Block Bitcoin::GENESIS;
+    my @block = new Bitcoin::Block qr/^0+19/';
     my $block = new Bitcoin::Block $binary_block;
     my $block = new Bitcoin::Block -prevHash => '0x.....', -MerkleRoot => '.....', ...  ;
     my $block = new Bitcoin::Block { prevHash => '0x.....', MerkleRoot => '.....', ... } ;
 
-    print "%s\n", unpack 'H*', $block->serialize();
+    printf "%s\n", Bitcoin::hash_hex $block->header;
 
     use Data::Dumper;
     print +Dumper $block;
+    print +Dumper unbless $block;
 
+    print "%s\n", unpack 'H*', $block->serialize();
 
 =head1 DESCRIPTION
 
 This class encapsulates a bitcoin block.
 
 When a hash, a regex, or a block number is provided, the constructor opens the bitcoin
-database and searches for the corresponding block.
+database and searches for the corresponding block(s).
 
 =head1 AUTHOR
 

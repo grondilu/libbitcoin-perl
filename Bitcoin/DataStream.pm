@@ -141,6 +141,13 @@ sub calc_size {
 sub _no_class    { my $_ = shift; die "class method not implemented"    unless ref; return $_ }
 sub _no_instance { my $_ = shift; die "instance method not implemented" if ref;     return $_ }
 
+1;
+
+__END__
+
+=begin comment
+
+# unused functions (kept here for historical)
 sub _read_num {
     my $_ = shift->_no_class;
     my $format = shift;
@@ -154,10 +161,6 @@ sub _write_num {
     my $_ = shift->_no_class;
     $_->[1] .= pack @_[0,1];
 }
-
-# unused functions (kept for historical)
-sub _read_num;
-sub _write_num;
 
 sub read_boolean  { return substr(shift->read_bytes(1), 0, 1) ne chr 0 }
 sub read_int16    { return shift->_read_num('s') }
@@ -175,10 +178,7 @@ sub write_uint32  { my $_ = shift; return $_->_write_num('L', shift) }
 sub write_int64   { my $_ = shift; return $_->_write_num('q', shift) }
 sub write_uint64  { my $_ = shift; return $_->_write_num('Q', shift) }
 
-
-1;
-
-__END__
+=end comment
 
 =head1 TITLE
 

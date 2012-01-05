@@ -24,16 +24,16 @@ sub import {
     if (@_ < 1) { return }
     elsif (@_ == 1 and $_[0] eq ':all') { $pkg->import( qw(blkindex) ) }
     else {
-	use Perl6::Junction qw(none);
-	for (@_) {
-	    next if $_ eq none qw(blkindex);
-	    unless (defined $blkindex) {
-		$blkindex = tie %blkindex, 'BerkeleyDB::Btree',
-		-Filename => $_.'.dat',
+	for my $db (@_) {
+	    next unless exists { map { $_ => undef } qw(blkindex) }->{$db};
+	    no strict 'refs';
+	    unless (defined ${(__PACKAGE__.'::')->{$db}}) {
+		${(__PACKAGE__.'::')->{$db}} = tie %{(__PACKAGE__.'::')->{$db}}, 'BerkeleyDB::Btree',
+		-Filename => $db.'.dat',
 		-Subname  => 'main',
 		-Env      => $Env,
 		-Flags    => DB_THREAD| DB_RDONLY,
-		    or warn "could not tie $_.dat: $!"
+		    or warn "could not tie $db.dat: $!"
 		;
 	    }
 	}

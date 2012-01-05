@@ -11,7 +11,6 @@ require Exporter;
 
 use strict;
 use warnings;
-use Perl6::Junction qw(any all none);
 
 # Dependencies
 #
@@ -87,7 +86,7 @@ sub mktx {
 sub request {
     my $command = shift;
     my $response;
-    if ($Bitcoin::Electrum::port == any 80, 8080, 443) {
+    if ($Bitcoin::Electrum::port =~ /80|8080|443/) {
 	# We're using HTTP
 	use URI;
 	use URI::Escape;
