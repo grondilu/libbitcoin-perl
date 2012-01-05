@@ -24,7 +24,7 @@ sub new {
 		nNonce         => $arg->Read(Bitcoin::DataStream::UINT32),
 	    }, $class)->check_proof_of_work;
 
-	return $this if $class =~ /::HEADER$/;
+	return $this if $class =~ /::HEADER$/i;
 
 	if ($this->{version} & (1 << 8)) {
 	    my $merkle_tx = new Bitcoin::Transaction $arg;
@@ -70,7 +70,7 @@ sub new {
 		$cursor->c_get($k, $v, BerkeleyDB::DB_SET_RANGE);
 		do {
 		    my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
-		    $kds->read_string;
+		    last SEARCH if $kds->read_string ne 'blockindex';
 		    my $hash = unpack 'H*', reverse $kds->Read(Bitcoin::DataStream::BYTE . 32);
 		    if (ref $arg eq 'Regexp') { push @result, $hash if $hash =~ $arg }
 		    else {
@@ -82,10 +82,10 @@ sub new {
 			last SEARCH if $nHeight == $arg;
 		    }
 		} until $cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
-		if (@result > 1) { return map { ($class.'::HEADER')->new($_) } @result }
-		elsif (@result == 1) { return new $class shift @result }
-		die "no such result";
 	    }
+	    if (@result > 1) { return { map { $_ => ($class.'::HEADER')->new($_) } @result } }
+	    elsif (@result == 1) { return new $class shift @result }
+	    elsif (ref $arg eq 'Regexp') { die "no matching block" }
 	}
 	else { die 'wrong argument format' }
 	return new $class Bitcoin::DataStream->new->map_file(
@@ -162,7 +162,7 @@ Bitcoin::Block
 
     my $block = new Bitcoin::Block 121_899;
     my $block = new Bitcoin::Block Bitcoin::GENESIS;
-    my @block = new Bitcoin::Block qr/^0+19/';
+    my @block = new Bitcoin::Block qr/^0+19/;
     my $block = new Bitcoin::Block $binary_block;
     my $block = new Bitcoin::Block -prevHash => '0x.....', -MerkleRoot => '.....', ...  ;
     my $block = new Bitcoin::Block { prevHash => '0x.....', MerkleRoot => '.....', ... } ;

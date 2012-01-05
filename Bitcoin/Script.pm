@@ -1,35 +1,81 @@
 #!/usr/bin/perl
-package Bitcoin::Script::Stack;
+package Bitcoin::Script;
+use strict;
+use warnings;
+
 my (@S, @alt_S);
 sub check_size { die "stack is too small" if @S < shift }
 sub Pop { pop @S // die "stack is too small" }
 sub Push { push @S, @_ }
+
 sub OP_TOALTSTACK   { push @alt_S, $S[$#S] // die "empty stack" }
 sub OP_FROMALTSTACK { Push pop @alt_S // die "empty alt stack" }
-sub OP_DROP { Pop }
+sub OP_DROP  { Pop }
 sub OP_2DROP { Pop, Pop }
 sub OP_DUP   { check_size 1; Push $S[$#S] }
 sub OP_2DUP  { check_size 2; Push @S[$#S-1,$#S] }
 sub OP_3DUP  { check_size 3; Push @S[$#S-2 .. $#S] }
 sub OP_2OVER { check_size 4; splice @S, -4, 0, @S[$#S-1,$#S] }
-sub OP_2ROT  { check_size 6; @S[$#S-5 .. $#S] = @S[$#S-3 .. $#S, $#S-5, $#S-4] }
-sub OP_2SWAP { check_size 4; @S[$#S-4 .. $#S] = @S[$#S-1, $#S, $#S-4, $#S-3] }
-sub OP_IFUP  { check_size 1; Push $S[$#S] if $S[$#S] }
-sub OP_DEPTH { use bigint; Push scalar @S }
+sub OP_2ROT  { check_size 6; Push splice @S, -6, 2 }
+sub OP_2SWAP { check_size 4; Push splice @S, -4, 2 }
+sub OP_IFDUP { check_size 1; Push $S[$#S] if $S[$#S] }
+sub OP_DEPTH { Push scalar @S }
 sub OP_NIP   { check_size 2; splice @S, -2, 1 }
 sub OP_OVER  { check_size 2; Push $S[$#S-1] }
 sub OP_PICK  { check_size my $n = shift;  Push $S[$#S - $n + 1] }
 sub OP_ROLL  { check_size my $n = shift;  Push $S[$#S - $n + 1]; splice @S, -$n, 1 }
-sub OP_ROT   { check_size 3; OP_TOALTSTACK $S[$#S-2]; splice @S, -3, 1; OP_FROMALTSTACK }
-sub OP_SWAP  { check_size 2; OP_DUP; OP_ROT; OP_NIP }
-sub OP_TUCK  { check_size 2; OP_DUP; OP_ROT; OP_ROT }
+sub OP_ROT   { check_size 3; Push splice @S, -3, 1 }
+sub OP_SWAP  { OP_NIP OP_ROT OP_DUP }
+sub OP_TUCK  { OP_ROT OP_ROT OP_DUP }
 
+sub OP_0	{ Push 0 }
+sub OP_1NEGATE  { Push -1 }
+sub OP_ADD      { Push OP_DROP() + OP_DROP() }
+sub OP_MUL      { Push OP_DROP() * OP_DROP() }
+sub OP_DIV      { use integer; Push OP_DROP() / OP_DROP() }
+sub OP_MOD      { Push OP_DROP() % OP_DROP() }
+sub OP_LSHIFT   { Push OP_DROP() << OP_DROP() }
+sub OP_RSHIFT   { Push OP_DROP() >> OP_DROP() }
+sub OP_BOOLAND  { Push OP_DROP ? OP_DROP() : (OP_DROP, 0) }  # using ternary to avoid laziness
+sub OP_BOOLOR   { Push OP_DROP ? (OP_DROP, 1) : OP_DROP }  # using ternary to avoid laziness
+sub OP_NUMEQUAL { Push OP_DROP() == OP_DROP() }
+sub OP_NUMEQUALVERIFY { OP_NUMEQUAL; die "OP_NUMEQUALVERIFY" unless OP_DROP }
+sub OP_LESSTHAN { Push OP_DROP < OP_DROP }
+sub OP_GREATERTHAN { Push OP_DROP > OP_DROP }
+sub OP_GREATERTHANOREQUAL { Push OP_DROP >= OP_DROP }
+sub OP_MIN      { (OP_DROP OP_LESSTHAN OP_2DUP) ? OP_NIP : OP_DROP }
+sub OP_MAX      { (OP_DROP OP_LESSTHAN OP_2DUP) ? OP_DROP : OP_NIP }
 
-package Bitcoin::Script;
-use strict;
-use warnings;
+sub OP_WITHIN   { OP_BOOLAND OP_LESSTHAN OP_ROT OP_ROT OP_LESSTHAN OP_OVER OP_SWAP OP_ROT }
 
-use constant {
+sub OP_RIPEMD160 { Push qx/perl -e 'print pack "b*", '@{[unpack 'b*', OP_DROP]}' | openssl dgst -rmd160 -binary/ }
+sub OP_SHA1      { use Digest::SHA qw(sha1);   Push sha1 OP_DROP }
+sub OP_SHA256    { use Digest::SHA qw(sha256); Push sha256 OP_DROP }
+sub OP_HASH160   { use Bitcoin; Push Bitcoin::hash160 OP_DROP }
+sub OP_HASH256   { use Bitcoin; Push Bitcoin::hash    OP_DROP }
+
+sub OP_1ADD        { OP_ADD OP_1 }
+sub OP_1SUB        { OP_ADD OP_1NEGATE }
+sub OP_2MUL        { Push OP_DROP << 1 }
+sub OP_2DIV        { Push OP_DROP >> 1 }
+sub OP_NEGATE      { OP_MUL OP_1NEGATE }
+sub OP_ABS         { Push abs OP_DROP }
+sub OP_NOT         { Push not OP_DROP }
+sub OP_0NOTEQUAL   { Push OP_DROP != 0 }
+
+sub OP_CAT           { check_size 2; Push OP_DROP() . OP_DROP }
+sub OP_SUBSTR        { check_size 3; OP_SWAP; OP_ROT; Push substr OP_DROP, OP_DROP, OP_DROP }
+sub OP_LEFT          { check_size 2; OP_SUBSTR OP_SWAP OP_0 }
+sub OP_RIGHT         { check_size 2; OP_SUBSTR OP_SWAP OP_NEGATE OP_DUP }
+sub OP_SIZE          { check_size 1; OP_DUP; Push scalar map undef, OP_DROP =~ /./mgs }
+sub OP_INVERT        { check_size 1; Push ~OP_DROP }
+sub OP_AND           { check_size 2; Push OP_DROP() & OP_DROP }
+sub OP_OR            { check_size 2; Push OP_DROP() | OP_DROP }
+sub OP_XOR           { check_size 2; Push OP_DROP() ^ OP_DROP }
+sub OP_EQUAL         { check_size 2; Push OP_DROP() eq OP_DROP }
+sub OP_EQUALVERIFY   { die "OP_EQUALVERIFY" unless OP_DROP OP_EQUAL }
+
+use constant CODE => {
 
     # {{{ Constants
     OP_0 => 0, OP_FALSE	=> 0,   # An empty array of bytes is pushed onto the stack. (This is not a no-op: an item is added to the stack.)
@@ -57,7 +103,6 @@ use constant {
     # }}}
     # {{{ Flow control
     OP_NOP	=> 97,		# Does nothing.
-    OP_VER	=> 98,		# ???
     OP_IF	=> 99,  	# If the top stack value is 1, the statements are executed. The top stack value is removed.
     OP_NOTIF	=> 100, 	# If the top stack value is 0, the statements are executed. The top stack value is removed.
     OP_ELSE	=> 103, 	# If the preceding OP_IF or OP_NOTIF was not executed then these statements are.
@@ -235,7 +280,7 @@ Bitcoin::Script
 
 =head1 DESCRIPTION
 
-This module describes the internal bitcoin scripting language.
+This module implements the internal bitcoin scripting language.
 
 =head1 AUTHOR
 
