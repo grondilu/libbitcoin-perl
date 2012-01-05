@@ -1,4 +1,30 @@
 #!/usr/bin/perl
+package Bitcoin::Script::Stack;
+my (@S, @alt_S);
+sub check_size { die "stack is too small" if @S < shift }
+sub Pop { pop @S // die "stack is too small" }
+sub Push { push @S, @_ }
+sub OP_TOALTSTACK   { push @alt_S, $S[$#S] // die "empty stack" }
+sub OP_FROMALTSTACK { Push pop @alt_S // die "empty alt stack" }
+sub OP_DROP { Pop }
+sub OP_2DROP { Pop, Pop }
+sub OP_DUP   { check_size 1; Push $S[$#S] }
+sub OP_2DUP  { check_size 2; Push @S[$#S-1,$#S] }
+sub OP_3DUP  { check_size 3; Push @S[$#S-2 .. $#S] }
+sub OP_2OVER { check_size 4; splice @S, -4, 0, @S[$#S-1,$#S] }
+sub OP_2ROT  { check_size 6; @S[$#S-5 .. $#S] = @S[$#S-3 .. $#S, $#S-5, $#S-4] }
+sub OP_2SWAP { check_size 4; @S[$#S-4 .. $#S] = @S[$#S-1, $#S, $#S-4, $#S-3] }
+sub OP_IFUP  { check_size 1; Push $S[$#S] if $S[$#S] }
+sub OP_DEPTH { use bigint; Push scalar @S }
+sub OP_NIP   { check_size 2; splice @S, -2, 1 }
+sub OP_OVER  { check_size 2; Push $S[$#S-1] }
+sub OP_PICK  { check_size my $n = shift;  Push $S[$#S - $n + 1] }
+sub OP_ROLL  { check_size my $n = shift;  Push $S[$#S - $n + 1]; splice @S, -$n, 1 }
+sub OP_ROT   { check_size 3; OP_TOALTSTACK $S[$#S-2]; splice @S, -3, 1; OP_FROMALTSTACK }
+sub OP_SWAP  { check_size 2; OP_DUP; OP_ROT; OP_NIP }
+sub OP_TUCK  { check_size 2; OP_DUP; OP_ROT; OP_ROT }
+
+
 package Bitcoin::Script;
 use strict;
 use warnings;
@@ -6,82 +32,8 @@ use warnings;
 use constant {
 
     # {{{ Constants
-    OP_0 => 0, OP_FALSE	=> 0,     # An empty array of bytes is pushed onto the stack. (This is not a no-op: an item is added to the stack.)
-    'N_A' => 1,                   # The next opcode bytes is data to be pushed onto the stack
-    'N_A' => 2,
-    'N_A' => 3,
-    'N_A' => 4,
-    'N_A' => 5,
-    'N_A' => 6,
-    'N_A' => 7,
-    'N_A' => 8,
-    'N_A' => 9,
-    'N_A' => 10,
-    'N_A' => 11,
-    'N_A' => 12,
-    'N_A' => 13,
-    'N_A' => 14,
-    'N_A' => 15,
-    'N_A' => 16,
-    'N_A' => 17,
-    'N_A' => 18,
-    'N_A' => 19,
-    'N_A' => 20,
-    'N_A' => 21,
-    'N_A' => 22,
-    'N_A' => 23,
-    'N_A' => 24,
-    'N_A' => 25,
-    'N_A' => 26,
-    'N_A' => 27,
-    'N_A' => 28,
-    'N_A' => 29,
-    'N_A' => 30,
-    'N_A' => 31,
-    'N_A' => 32,
-    'N_A' => 33,
-    'N_A' => 34,
-    'N_A' => 35,
-    'N_A' => 36,
-    'N_A' => 37,
-    'N_A' => 38,
-    'N_A' => 39,
-    'N_A' => 40,
-    'N_A' => 41,
-    'N_A' => 42,
-    'N_A' => 43,
-    'N_A' => 44,
-    'N_A' => 45,
-    'N_A' => 46,
-    'N_A' => 47,
-    'N_A' => 48,
-    'N_A' => 49,
-    'N_A' => 50,
-    'N_A' => 51,
-    'N_A' => 52,
-    'N_A' => 53,
-    'N_A' => 54,
-    'N_A' => 55,
-    'N_A' => 56,
-    'N_A' => 57,
-    'N_A' => 58,
-    'N_A' => 59,
-    'N_A' => 60,
-    'N_A' => 61,
-    'N_A' => 62,
-    'N_A' => 63,
-    'N_A' => 64,
-    'N_A' => 65,
-    'N_A' => 66,
-    'N_A' => 67,
-    'N_A' => 68,
-    'N_A' => 69,
-    'N_A' => 70,
-    'N_A' => 71,
-    'N_A' => 72,
-    'N_A' => 73,
-    'N_A' => 74,
-    'N_A' => 75,
+    OP_0 => 0, OP_FALSE	=> 0,   # An empty array of bytes is pushed onto the stack. (This is not a no-op: an item is added to the stack.)
+    #  1, 2, ..., 75            # The next opcode bytes is data to be pushed onto the stack
     OP_PUSHDATA1 => 76,         # The next byte      contains the number of bytes to be pushed onto the stack.
     OP_PUSHDATA2 => 77,         # The next two bytes contain  the number of bytes to be pushed onto the stack.
     OP_PUSHDATA4 => 78,         # The next four byte contain  the number of bytes to be pushed onto the stack.
@@ -105,6 +57,7 @@ use constant {
     # }}}
     # {{{ Flow control
     OP_NOP	=> 97,		# Does nothing.
+    OP_VER	=> 98,		# ???
     OP_IF	=> 99,  	# If the top stack value is 1, the statements are executed. The top stack value is removed.
     OP_NOTIF	=> 100, 	# If the top stack value is 0, the statements are executed. The top stack value is removed.
     OP_ELSE	=> 103, 	# If the preceding OP_IF or OP_NOTIF was not executed then these statements are.
@@ -238,6 +191,36 @@ use constant {
 
 };                              
                                 
+sub new {
+    use Bitcoin::DataStream;
+    my $class = shift; do {...} if ref $class;
+    my $arg = shift;
+    return bless [
+	unpack 'C*',
+	$arg =~ /^[0-9a-f]+$/i ?
+	pack 'H*', $arg :
+	ref($arg) eq 'Bitcoin::DataStream' ?
+	Read $arg Bitcoin::DataStream::STRING :
+	die 'wrong argument format'
+    ],
+    $class;
+}
+
+sub Eval {
+    my $this = shift; do {...} unless ref $this;
+    ...
+}
+
+use overload
+q/&{}/ => \&Eval,
+q(<<)  => sub {
+    do {...} if $_[2];
+    my ($this, $_) = @_;
+    if (/^[\d]+$/) {
+	if ($_ < 256 and $_ >= 0) { push @$this, $_ }
+    }
+};
+
 1;
 
 __END__

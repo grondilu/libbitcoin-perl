@@ -28,7 +28,7 @@ sub new {
 
 	if ($this->{version} & (1 << 8)) {
 	    my $merkle_tx = new Bitcoin::Transaction $arg;
-	    $merkle_tx->{chainMerkleBranch} = $arg->read_bytes(32*$arg->read_compact_size);
+	    $merkle_tx->{chainMerkleBranch} = $arg->Read(Bitcoin::DataStream::BYTE . (32*$arg->read_compact_size));
 	    $merkle_tx->{chainIndex} = $arg->Read(Bitcoin::DataStream::INT32);
 	    $merkle_tx->{parentBlock} = ($class.'::HEADER')->new($arg);
 	}
@@ -60,7 +60,7 @@ sub new {
 	    die "block entry was removed" unless defined $v;
 	    my $vds = new Bitcoin::DataStream $v;
 	    $vds->Read(Bitcoin::DataStream::INT32);  # version
-	    $vds->read_bytes(32);  # hashNext
+	    $vds->Read(Bitcoin::DataStream::BYTE . 32);  # hashNext
 	    $nFile        = $vds->Read(Bitcoin::DataStream::UINT32);
 	    $nBlockPos    = $vds->Read(Bitcoin::DataStream::UINT32);
 	}
@@ -71,11 +71,11 @@ sub new {
 		do {
 		    my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
 		    $kds->read_string;
-		    my $hash = unpack 'H*', reverse $kds->read_bytes(32);
+		    my $hash = unpack 'H*', reverse $kds->Read(Bitcoin::DataStream::BYTE . 32);
 		    if (ref $arg eq 'Regexp') { push @result, $hash if $hash =~ $arg }
 		    else {
 			$vds->Read(Bitcoin::DataStream::INT32);  # version
-			$vds->read_bytes(32);  # hashNext
+			$vds->Read(Bitcoin::DataStream::BYTE . 32);  # hashNext
 			$nFile        = $vds->Read(Bitcoin::DataStream::UINT32);
 			$nBlockPos    = $vds->Read(Bitcoin::DataStream::UINT32);
 			my $nHeight   = $vds->Read(Bitcoin::DataStream::INT32);

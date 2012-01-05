@@ -9,9 +9,9 @@ use warnings;
 # constants
 #
 use constant {
+    BYTE	=> 'a',
     CHAR	=> 'c',
     UCHAR	=> 'C',
-    BYTE	=> 'a',
     INT16	=> 's',
     UINT16	=> 'S',
     INT32	=> 'l',
@@ -68,9 +68,11 @@ sub close_file { undef shift->_no_class->[1] }
 
 sub Read {
     my $_ = shift->_no_class;
+    die "data stream is empty" if $_->[1] eq '';
     my $what_to_read = shift;
     return $_->read_string if $what_to_read eq STRING;
-    my $length = calc_size $what_to_read;
+    #my $length = calc_size $what_to_read;
+    my $length = $what_to_read eq STRING ? $_->read_compact_size : calc_size $what_to_read;
     die "buffer overflow" if $length > length($_->[1]) - $_->[0];
     my $result = unpack $what_to_read, substr $_->[1], $_->[0], $length;
     $_->[0] += $length;
@@ -135,7 +137,7 @@ sub calc_size {
     /s/i ? 2 :
     /l/i ? 4 :
     /q/i ? 8 :
-    /(?:a|c)(\d+)/i ? $1 :
+    /a(\d+)/i ? $1 :
     die "unknown format"
     ;
 }
