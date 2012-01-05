@@ -2,6 +2,7 @@
 package Bitcoin;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(BASE58 BTC);
+use v5.14;
 
 use constant BASE58	=> qw{
       1 2 3 4 5 6 7 8 9
@@ -15,12 +16,17 @@ use constant {
     GENESIS_TEST    	=> '00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008',
     TIMES20090103       => 'The Times 03/Jan/2009 Chancellor on brink of second bailout for banks',
 
+    DATA_DIR		=> $ENV{HOME}.'/.bitcoin',
+
     PROOF_OF_WORK_LIMIT =>          32, # bits
     MAX_BLOCK_SIZE	=>   1_000_000,
     COIN		=> 100_000_000,
     CENT		=>   1_000_000,
     MAX_MONEY		=>       21e14,
     TEST		=>           0,
+
+    DEFAULT_PORT	=>        8333,
+
 };
 
 sub hash160 {
@@ -30,6 +36,8 @@ sub hash160 {
     openssl dgst -rmd160 -binary
     /;
 }
+
+sub genesis { TEST ? GENESIS_TEST : GENESIS };
 
 sub hash;
 sub hash_hex;

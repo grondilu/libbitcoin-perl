@@ -17,8 +17,8 @@ sub new {
     if (ref $arg eq 'Bitcoin::DataStream') {
 	my $this = bless({
 		version        => $arg->Read(Bitcoin::DataStream::INT32),
-		hashPrev       => unpack('H*', reverse $arg->read_bytes(32)),
-		hashMerkleRoot => unpack('H*', reverse $arg->read_bytes(32)),
+		hashPrev       => unpack('H*', reverse $arg->Read(Bitcoin::DataStream::BYTE . 32)),
+		hashMerkleRoot => unpack('H*', reverse $arg->Read(Bitcoin::DataStream::BYTE . 32)),
 		nTime          => $arg->Read(Bitcoin::DataStream::UINT32),
 		nBits          => $arg->Read(Bitcoin::DataStream::UINT32),
 		nNonce         => $arg->Read(Bitcoin::DataStream::UINT32),
@@ -43,7 +43,7 @@ sub new {
     }
     elsif (@_ > 1 and @_ % 2 == 0) { new $class +{ @_ } }
     elsif ($arg =~ /^[a-f\d]+$/ or ref $arg eq 'Regexp') {
-	Bitcoin::Database->import('blkindex');
+	import Bitcoin::Database 'blkindex';
 	my $cursor = $Bitcoin::Database::blkindex->db_cursor;
 	my ($prefix,) = map chr(length). $_, 'blockindex';
 	my ($k, $v) = ($prefix, '');
@@ -89,7 +89,7 @@ sub new {
 	}
 	else { die 'wrong argument format' }
 	return new $class Bitcoin::DataStream->new->map_file(
-	    sprintf('%s/blk%04d.dat', Bitcoin::Database::DATA_DIR, $nFile),
+	    sprintf('%s/blk%04d.dat', Bitcoin::DATA_DIR, $nFile),
 	    $nBlockPos
 	);
     }
@@ -118,7 +118,7 @@ sub unbless {
     +{
 	map {
 	$_ => $_ eq 'transactions' ?
-	[ map { %$_ } @{$this->{$_}} ] :
+	[ map { +{ %$_ } } @{$this->{$_}} ] :
 	$this->{$_}
 	} keys %$this
     }
@@ -167,13 +167,13 @@ Bitcoin::Block
     my $block = new Bitcoin::Block -prevHash => '0x.....', -MerkleRoot => '.....', ...  ;
     my $block = new Bitcoin::Block { prevHash => '0x.....', MerkleRoot => '.....', ... } ;
 
-    printf "%s\n", Bitcoin::hash_hex $block->header;
+    print Bitcoin::hash_hex $block->header;
 
     use Data::Dumper;
     print +Dumper $block;
     print +Dumper unbless $block;
 
-    print "%s\n", unpack 'H*', $block->serialize();
+    print unpack 'H*', serialize $block;
 
 =head1 DESCRIPTION
 
