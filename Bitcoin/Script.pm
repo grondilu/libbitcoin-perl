@@ -1,7 +1,9 @@
 #!/usr/bin/perl
-package Bitcoin::Script;
+package Bitcoin::Script::Stack;
 use strict;
 use warnings;
+
+=begin comment
 
 my (@S, @alt_S);
 sub check_size { die "stack is too small" if @S < shift }
@@ -235,36 +237,108 @@ use constant CODE => {
     # }}}
 
 };                              
+=end comment
+
+=cut
                                 
+package Bitcoin::Script;
+use strict;
+use warnings;
+
 sub new {
-    use Bitcoin::DataStream;
     my $class = shift; do {...} if ref $class;
-    my $arg = shift;
-    return bless [
-	unpack 'C*',
-	$arg =~ /^[0-9a-f]+$/i ?
-	pack 'H*', $arg :
-	ref($arg) eq 'Bitcoin::DataStream' ?
-	Read $arg Bitcoin::DataStream::STRING :
-	die 'wrong argument format'
-    ],
-    $class;
+    my $arg = shift; do {...} if ref $arg;
+    my $this = bless { code => unpack 'H*', $arg }, $class;
+    $this->decode;
 }
-
-sub Eval {
+sub binary_code { my $_ = shift; die 'empty code' if $_->{code} eq ''; pack 'H*', $_->{code}  }
+sub first_char  { my $_ = shift; ord substr $_->binary_code, 0, 1 }
+sub data_length {
     my $this = shift; do {...} unless ref $this;
-    ...
+    my $first_char = $this->first_char;
+    $first_char  < 76 ? $first_char :
+    $first_char == 76 ? unpack 's>', substr $this->binary_code, 1, 1 :
+    $first_char == 77 ? unpack 's>', substr $this->binary_code, 1, 2 :
+    $first_char == 78 ? unpack 's>', substr $this->binary_code, 1, 4 :
+    0;
+}
+sub data_offset {
+    my $this = shift; do {...} unless ref $this;
+    my $first_char = $this->first_char;
+    $first_char  < 76 ? 1 :
+    $first_char == 76 ? 2 :
+    $first_char == 77 ? 3 :
+    $first_char == 78 ? 5 :
+    0;
 }
 
-use overload
-q/&{}/ => \&Eval,
-q(<<)  => sub {
-    do {...} if $_[2];
-    my ($this, $_) = @_;
-    if (/^[\d]+$/) {
-	if ($_ < 256 and $_ >= 0) { push @$this, $_ }
+
+sub decode {
+    my $this = shift; do {...} unless ref $this;
+    return if $this->{code} eq '';
+    my @decode;
+    my $binary_code = $this->binary_code;
+    my $first_char  = $this->first_char;
+    my $data_length = $this->data_length;
+    my $data_offset = $this->data_offset;
+    if ($first_char < 79 and $first_char > 0) {
+	push @decode, (ref($this).'::PushData')->new(substr $binary_code, 0, $data_offset + $data_length);
     }
-};
+    else {
+	push @decode, (ref($this).'::OP')->new(chr $first_char);
+	$data_length = 1;
+    }
+    my $remain = substr $binary_code, $data_offset + $data_length;
+    push @decode, @{ref($this)->new($remain)->{decode} // []} unless $remain eq '';
+    $this->{decode} = [ @decode ] if @decode;
+    return $this;
+}
+
+package Bitcoin::Script::OP;
+our @ISA = qw(Bitcoin::Script);
+sub decode {
+    my $this = shift; do {...} unless ref $this;
+    return if $this->{code} eq '';
+    $this->{value} = hex $this->{code};
+    return $this;
+}
+
+package Bitcoin::Script::PushData;
+our @ISA = qw(Bitcoin::Script);
+use MIME::QuotedPrint;
+sub decode {
+    my $this = shift; do {...} unless ref $this;
+    return if $this->{code} eq '';
+    my $first_char = $this->first_char;
+    my $data = substr $this->binary_code, $this->data_offset;
+    $this->{data}  = encode_qp $data;
+    if ($data =~ /\A[ [:ascii:] ]{4,}\Z/x ) {
+	return +(bless $this, ref($this).'::ASCII')->decode;
+    }
+    elsif ($data =~ /\A\x{04}.{64}+\Z/m) {
+	return +(bless $this, ref($this).'::PublicKey')->decode;
+    }
+    else { return $this }
+}
+sub binary_data { my $_ = shift; decode_qp $_->{data} }
+
+package Bitcoin::Script::PushData::ASCII;
+our @ISA = qw(Bitcoin::Script::PushData);
+sub decode {
+    my $_ = shift;
+    $_->{data} = $_->binary_data;
+    return $_;
+}
+
+package Bitcoin::Script::PushData::PublicKey;
+our @ISA = qw(Bitcoin::Script::PushData);
+use Bitcoin::Address;
+sub decode {
+    my $_ = shift;
+    $_->{address} = ''. new Bitcoin::Address
+    unpack 'H*', Bitcoin::hash160 reverse $_->binary_data;
+    return $_;
+}
 
 1;
 
