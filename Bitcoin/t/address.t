@@ -5,7 +5,6 @@ BEGIN { plan tests => 8, todo => [] }
 
 use Bitcoin::Address;
 
-new Bitcoin::Address '0x8fc7459ff249d98d8f9cec2d9fd9cd958b81caf8';
 use constant KEYS => [
     [ <<stop , '1QAVk6rZ8Tzj6665X3v1yPGfKwNHFjGV4y' ],
 -----BEGIN PUBLIC KEY-----
@@ -29,7 +28,7 @@ stop
 
 ok( Bitcoin::Address->new('1DxH3bjYeCKbSKvVEsXQUBjsTcxagmWjHy')->toBase58, '1DxH3bjYeCKbSKvVEsXQUBjsTcxagmWjHy');
 ok( Bitcoin::Address->new('1DxH3bjYeCKbSKvVEsXQUBjsTcxagmWjHy')->toHex, '008e15c7e4ca858c3f412461bee5d472b0b6c362a5b6673b28');
-my $addr = Bitcoin::Address->new(KEYS->[0][0]);
+my $addr = new Bitcoin::Address KEYS->[0][0];
 ok ( $addr, qr/^1/, "generated address does not start with 1" );
 
 ok( Bitcoin::Address->new($$_[0])->toBase58, $$_[1] ) for @{+KEYS};

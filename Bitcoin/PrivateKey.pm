@@ -1,14 +1,13 @@
 #!/usr/bin/perl
 package Bitcoin::PrivateKey;
-require Bitcoin::Address;
-require Exporter;
-# A bitcoin privatekey inherits from a bitcoin address as it
-# shares a common encoding system (Wallet Import Format)
-@ISA = qw(Bitcoin::Address Exporter);
-@EXPORT_OK = qw(G);
+require Bitcoin::Base58;
+@ISA = qw(Bitcoin::Base58::Data);
 
 use strict;
 use warnings;
+
+use Bitcoin;
+use Bitcoin::Address;
 
 use EC;
 use EC::Curves qw(secp256k1);
@@ -21,13 +20,14 @@ use constant G => secp256k1->{G};
 use constant DUMMY_PASSWD => 'dummy password';
 
 # Redefined methods
-sub new;
-sub value;
 sub size { 256 }
-sub default_version { 128 }
+sub default_version { Bitcoin::TEST ? 128 : 129 }
+
+# aliases
+no warnings 'once';
+*toWIF = *WIF = \&toBase58;
 
 # Additional methods
-sub toWIF { shift->toBase58 }
 sub encrypt;
 sub decrypt;
 sub randInt;
@@ -58,10 +58,12 @@ use overload
 # definitions
 #
 sub new {
-    my $_ = shift;
+    my $class = shift->_no_instance;
     my $arg = shift;
-    if (ref $arg eq 'Crypt::Rijndael') { $_->SUPER::new(randInt)->encrypt($arg) }
-    else { $_->SUPER::new($arg // randInt()) }
+    my $version = shift;
+    if (ref $arg eq 'Crypt::Rijndael')       { (new $class $class->randInt)->encrypt($arg) }
+    elsif ($arg =~ m/-+BEGIN [^-]* KEY---/)  { new $class $class->_from_PEM($arg), $version }
+    else                                     { SUPER::new $class $arg, $version }
 }
 
 sub value {
@@ -71,22 +73,32 @@ sub value {
 }
 
 sub encrypt {
-    my $_ = shift;
-    die "class method call not implemented" unless ref;
+    my $_ = shift->_no_class;
     # noise filling -> encrypt
-    $$_[1] .= '__STOP__'; $$_[1] .= chr rand 256 while 8*length($$_[1]) % 128;
-    $$_[1] = ref->cipher(shift)->encrypt($$_[1]);
+    $$_[0] .= '__STOP__'; $$_[0] .= chr rand 256 while 8*length($$_[0]) % 128;
+    $$_[0] = ref->cipher(shift)->encrypt($$_[0]);
     return $_;
 }
 
 sub decrypt {
-    my $_ = shift;
-    die "class method call not implemented" unless ref;
+    my $_ = shift->_no_class;
     # decrypt -> remove noise
-    $$_[1] = ref->cipher(shift)->decrypt($$_[1]);
-    die 'wrong password' unless $$_[1] =~ s/__STOP__.*//ms;
-    use Math::BigInt; $$_[1] = new Math::BigInt $$_[1];
+    $$_[0] = ref->cipher(shift)->decrypt($$_[0]);
+    die 'wrong password' unless $$_[0] =~ s/__STOP__.*//ms;
+    use Math::BigInt; $$_[0] = new Math::BigInt $$_[0];
     return $_;
+}
+
+sub public_point { EC::mult shift->_no_class->value, G }
+sub address { new Bitcoin::Address $_[0]->public_point, $_[1] }
+
+sub _from_PEM {
+    my $_ = shift->_no_instance;
+    return pack 'H*', qx(
+    echo "@{[shift]}" |
+    openssl ec -text -noout 2>&- |
+    sed -n '3,5s/[: ]//gp'
+    ) =~ s/\n//gr;
 }
 
 {
@@ -94,11 +106,11 @@ sub decrypt {
 
     sub cipher {
 	shift; # ignoring calling object
-	my $_ = shift;
-	if (ref eq 'Crypt::Rijndael') { return $_ }
+	my $arg = shift;
+	if (ref($arg) eq 'Crypt::Rijndael') { $arg }
 	else {
 	    use Crypt::Rijndael;
-	    return new Crypt::Rijndael sha256($_ || DUMMY_PASSWD), Crypt::Rijndael::MODE_CBC
+	    new Crypt::Rijndael sha256($arg || DUMMY_PASSWD), Crypt::Rijndael::MODE_CBC;
 	}
     }
 
@@ -106,30 +118,7 @@ sub decrypt {
 
     sub randInt {
 	shift; # ignoring calling object
-	return hex sha256_hex time . $$ . qx(openssl rand -rand $0 32 2>&-) . qx(ps axww |gzip -f);
-    }
-
-    sub public_point {
-	my $_ = shift;
-	die "class method call not implemented" unless ref;
-	return EC::mult $_->value, G;
-    }
-
-    sub address {
-	my $_ = shift;
-	die "class method call not implemented" unless ref;
-	my $version = shift;
-	return new Bitcoin::Address $_->public_point, $version;
-    }
-
-    sub _value_from_PEM {
-	my $_ = shift;
-	die "instance method call not implemented" if ref;
-	return hex(qx(
-	echo "@{[shift]}" |
-	openssl ec -text -noout 2>&- |
-	sed -n '3,5s/[: ]//gp'
-	) =~ s/\n//gr);
+	hex sha256_hex time . $$ . qx(openssl rand -rand $0 32 2>&-) . qx(ps axww |gzip -f);
     }
 
 }

@@ -26,7 +26,6 @@ sub set_param {
 
     sub Delta { -16*(4*$a**3 + 27*$b**2) }
     sub check {
-	{ package debug; our $i };
 	my $u = shift;
 	return $u unless @$u;
 	die "curve parameters are not defined" unless defined $a and defined $b;

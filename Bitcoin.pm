@@ -30,12 +30,13 @@ use constant {
 };
 
 sub hash160 {
-    return qx/
+    return scalar qx/
     perl -e 'print pack q(b*), "@{[unpack 'b*', shift]}"' |
     openssl dgst -sha256 -binary |
     openssl dgst -rmd160 -binary
     /;
 }
+sub hash160_hex { return unpack 'H*', hash160 @_ }
 
 sub genesis { TEST ? GENESIS_TEST : GENESIS };
 

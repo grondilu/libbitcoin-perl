@@ -1,5 +1,44 @@
 
-Bitcoin/DataStream.pm,920
+Address.pm,204
+package Bitcoin::Address;Bitcoin::Address2,19
+sub size() { 160 }size11,172
+sub default_version() { Bitcoin::TEST ? 1 : 0 }default_version12,191
+sub new {new19,315
+sub _from_PEM {_from_PEM34,835
+
+Base58.pm,910
+package Bitcoin::Base58;Bitcoin::Base583,58
+    sub decode { shift =~ m/.$/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }decode20,297
+    sub encode { my $_ = shift; return encode($_/58) . (BASE58)[$_%58] if $_ > 0 } encode21,380
+package Bitcoin::Base58::Data;Bitcoin::Base58::Data24,467
+sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class42,879
+sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance43,977
+sub value   { shift->_no_class->[0] }value47,1144
+sub data    { pack 'H*', shift->_no_class->value->as_hex =~ s/0x//r }data48,1182
+sub version { my $_ = shift; ref() ? $_->[1] // ref->default_version : $_->default_version }version49,1252
+    sub new {new55,1382
+    sub checksum {checksum76,2179
+    sub to_hex {to_hex83,2389
+    sub to_base58 {to_base5888,2546
+
+Block.pm,546
+package Bitcoin::Block;Bitcoin::Block2,19
+sub new {new14,192
+	    SEARCH: {SEARCH69,2381
+sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance100,3660
+sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class101,3758
+sub header {header103,3857
+sub unbless {unbless116,4217
+sub serialize {serialize127,4373
+sub check_proof_of_work {check_proof_of_work135,4563
+package Bitcoin::Block::HEADER;Bitcoin::Block::HEADER148,5031
+
+Database.pm,124
+package Bitcoin::Database;Bitcoin::Database2,16
+use constant NAMES => qw(blkindex);NAMES7,83
+sub import {import22,608
+
+DataStream.pm,920
 package Bitcoin::DataStream;Bitcoin::DataStream2,16
 sub new {new47,710
 sub clear { my $_ = shift->_no_class; @$_[0,1] = (0, '') }clear56,863
@@ -18,247 +57,115 @@ sub calc_size {calc_size133,3188
 sub _no_class    { my $_ = shift; die "class method not implemented"    unless ref; return $_ }_no_class145,3355
 sub _no_instance { my $_ = shift; die "instance method not implemented" if ref;     return $_ }_no_instance146,3451
 
-Bitcoin/Script.pm,4793
-package Bitcoin::Script;Bitcoin::Script2,16
-sub check_size { die "stack is too small" if @S < shift }check_size7,85
-sub Pop { pop @S // die "stack is too small" }Pop8,143
-sub Push { push @S, @_ }Push9,190
-sub OP_TOALTSTACK   { push @alt_S, $S[$#S] // die "empty stack" }OP_TOALTSTACK11,216
-sub OP_FROMALTSTACK { Push pop @alt_S // die "empty alt stack" }OP_FROMALTSTACK12,282
-sub OP_DROP  { Pop }OP_DROP13,347
-sub OP_2DROP { Pop, Pop }OP_2DROP14,368
-sub OP_DUP   { check_size 1; Push $S[$#S] }OP_DUP15,394
-sub OP_2DUP  { check_size 2; Push @S[$#S-1,$#S] }OP_2DUP16,438
-sub OP_3DUP  { check_size 3; Push @S[$#S-2 .. $#S] }OP_3DUP17,488
-sub OP_2OVER { check_size 4; splice @S, -4, 0, @S[$#S-1,$#S] }OP_2OVER18,541
-sub OP_2ROT  { check_size 6; Push splice @S, -6, 2 }OP_2ROT19,604
-sub OP_2SWAP { check_size 4; Push splice @S, -4, 2 }OP_2SWAP20,657
-sub OP_IFDUP { check_size 1; Push $S[$#S] if $S[$#S] }OP_IFDUP21,710
-sub OP_DEPTH { Push scalar @S }OP_DEPTH22,765
-sub OP_NIP   { check_size 2; splice @S, -2, 1 }OP_NIP23,797
-sub OP_OVER  { check_size 2; Push $S[$#S-1] }OP_OVER24,845
-sub OP_PICK  { check_size my $n = shift;  Push $S[$#S - $n + 1] }OP_PICK25,891
-sub OP_ROLL  { check_size my $n = shift;  Push $S[$#S - $n + 1]; splice @S, -$n, 1 }OP_ROLL26,957
-sub OP_ROT   { check_size 3; Push splice @S, -3, 1 }OP_ROT27,1042
-sub OP_SWAP  { OP_NIP OP_ROT OP_DUP }OP_SWAP28,1095
-sub OP_TUCK  { OP_ROT OP_ROT OP_DUP }OP_TUCK29,1133
-sub OP_0	{ Push 0 }OP_031,1172
-sub OP_1NEGATE  { Push -1 }OP_1NEGATE32,1192
-sub OP_ADD      { Push OP_DROP() + OP_DROP() }OP_ADD33,1220
-sub OP_MUL      { Push OP_DROP() * OP_DROP() }OP_MUL34,1267
-sub OP_DIV      { use integer; Push OP_DROP() / OP_DROP() }OP_DIV35,1314
-sub OP_MOD      { Push OP_DROP() % OP_DROP() }OP_MOD36,1374
-sub OP_LSHIFT   { Push OP_DROP() << OP_DROP() }OP_LSHIFT37,1421
-sub OP_RSHIFT   { Push OP_DROP() >> OP_DROP() }OP_RSHIFT38,1469
-sub OP_BOOLAND  { Push OP_DROP ? OP_DROP() : (OP_DROP, 0) }  # using ternary to avoid lazinessOP_BOOLAND39,1517
-sub OP_BOOLOR   { Push OP_DROP ? (OP_DROP, 1) : OP_DROP }  # using ternary to avoid lazinessOP_BOOLOR40,1612
-sub OP_NUMEQUAL { Push OP_DROP() == OP_DROP() }OP_NUMEQUAL41,1705
-sub OP_NUMEQUALVERIFY { OP_NUMEQUAL; die "OP_NUMEQUALVERIFY" unless OP_DROP }OP_NUMEQUALVERIFY42,1753
-sub OP_LESSTHAN { Push OP_DROP < OP_DROP }OP_LESSTHAN43,1831
-sub OP_GREATERTHAN { Push OP_DROP > OP_DROP }OP_GREATERTHAN44,1874
-sub OP_GREATERTHANOREQUAL { Push OP_DROP >= OP_DROP }OP_GREATERTHANOREQUAL45,1920
-sub OP_MIN      { (OP_DROP OP_LESSTHAN OP_2DUP) ? OP_NIP : OP_DROP }OP_MIN46,1974
-sub OP_MAX      { (OP_DROP OP_LESSTHAN OP_2DUP) ? OP_DROP : OP_NIP }OP_MAX47,2043
-sub OP_WITHIN   { OP_BOOLAND OP_LESSTHAN OP_ROT OP_ROT OP_LESSTHAN OP_OVER OP_SWAP OP_ROT }OP_WITHIN49,2113
-sub OP_RIPEMD160 { Push qx/perl -e 'print pack "b*", '@{[unpack 'b*', OP_DROP]}' | openssl dgst -rmd160 -binary/ }OP_RIPEMD16051,2206
-sub OP_SHA1      { use Digest::SHA qw(sha1);   Push sha1 OP_DROP }OP_SHA152,2321
-sub OP_SHA256    { use Digest::SHA qw(sha256); Push sha256 OP_DROP }OP_SHA25653,2388
-sub OP_HASH160   { use Bitcoin; Push Bitcoin::hash160 OP_DROP }OP_HASH16054,2457
-sub OP_HASH256   { use Bitcoin; Push Bitcoin::hash    OP_DROP }OP_HASH25655,2521
-sub OP_1ADD        { OP_ADD OP_1 }OP_1ADD57,2586
-sub OP_1SUB        { OP_ADD OP_1NEGATE }OP_1SUB58,2621
-sub OP_2MUL        { Push OP_DROP << 1 }OP_2MUL59,2662
-sub OP_2DIV        { Push OP_DROP >> 1 }OP_2DIV60,2703
-sub OP_NEGATE      { OP_MUL OP_1NEGATE }OP_NEGATE61,2744
-sub OP_ABS         { Push abs OP_DROP }OP_ABS62,2785
-sub OP_NOT         { Push not OP_DROP }OP_NOT63,2825
-sub OP_0NOTEQUAL   { Push OP_DROP != 0 }OP_0NOTEQUAL64,2865
-sub OP_CAT           { check_size 2; Push OP_DROP() . OP_DROP }OP_CAT66,2907
-sub OP_SUBSTR        { check_size 3; OP_SWAP; OP_ROT; Push substr OP_DROP, OP_DROP, OP_DROP }OP_SUBSTR67,2971
-sub OP_LEFT          { check_size 2; OP_SUBSTR OP_SWAP OP_0 }OP_LEFT68,3065
-sub OP_RIGHT         { check_size 2; OP_SUBSTR OP_SWAP OP_NEGATE OP_DUP }OP_RIGHT69,3127
-sub OP_SIZE          { check_size 1; OP_DUP; Push scalar map undef, OP_DROP =~ /./mgs }OP_SIZE70,3201
-sub OP_INVERT        { check_size 1; Push ~OP_DROP }OP_INVERT71,3289
-sub OP_AND           { check_size 2; Push OP_DROP() & OP_DROP }OP_AND72,3342
-sub OP_OR            { check_size 2; Push OP_DROP() | OP_DROP }OP_OR73,3406
-sub OP_XOR           { check_size 2; Push OP_DROP() ^ OP_DROP }OP_XOR74,3470
-sub OP_EQUAL         { check_size 2; Push OP_DROP() eq OP_DROP }OP_EQUAL75,3534
-sub OP_EQUALVERIFY   { die "OP_EQUALVERIFY" unless OP_DROP OP_EQUAL }OP_EQUALVERIFY76,3599
-use constant CODE => {CODE78,3670
-sub new {new239,14756
-sub Eval {Eval254,15071
-
-Bitcoin/Electrum.pm,192
+Electrum.pm,192
 package Bitcoin::Electrum;Bitcoin::Electrum2,19
 use constant COMMANDS => qw(COMMANDS5,59
 use constant DEFAULT => {DEFAULT10,209
 sub py2json {py2json26,570
 sub json2py {json2py31,717
 
-Bitcoin/Address.pm,382
-package Bitcoin::Address;Bitcoin::Address2,19
-sub size { 160 }size26,349
-sub default_version { Bitcoin::TEST ? 1 : 0 }default_version27,366
-    sub new {new34,500
-    sub _value_from_PEM {_value_from_PEM75,1746
-    sub checksum {checksum87,2025
-    sub toHex {toHex94,2235
-    sub toBase58 {toBase58100,2433
-sub version {version108,2610
-sub value {value113,2709
+PrivateKey.pm,634
+package Bitcoin::PrivateKey;Bitcoin::PrivateKey2,16
+use constant G => secp256k1->{G};G17,250
+use constant DUMMY_PASSWD => 'dummy password';DUMMY_PASSWD20,319
+sub size { 256 }size23,387
+sub default_version { Bitcoin::TEST ? 128 : 129 }default_version24,404
+sub new {new60,1101
+sub value {value69,1466
+sub encrypt {encrypt75,1601
+sub decrypt {decrypt83,1823
+sub public_point { EC::mult shift->_no_class->value, G }public_point92,2081
+sub address { new Bitcoin::Address $_[0]->public_point, $_[1] }address93,2138
+sub _from_PEM {_from_PEM95,2203
+    sub cipher {cipher107,2432
+    sub randInt {randInt119,2690
 
-Bitcoin/Block.pm,546
-package Bitcoin::Block;Bitcoin::Block2,19
-sub new {new14,192
-	    SEARCH: {SEARCH69,2381
-sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance100,3585
-sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class101,3683
-sub header {header103,3782
-sub unbless {unbless116,4142
-sub serialize {serialize127,4298
-sub check_proof_of_work {check_proof_of_work135,4488
-package Bitcoin::Block::HEADER;Bitcoin::Block::HEADER148,4956
+Script.pm,2733
+package Bitcoin::Script;Bitcoin::Script2,16
+sub check_size { die "stack is too small" if @S < shift }check_size24,1213
+sub Pop { pop @S // die "stack is too small" }Pop25,1271
+sub Push { push @S, @_ }Push26,1318
+sub OP_TOALTSTACK   { push @alt_S, $S[$#S] // die "empty stack" }OP_TOALTSTACK28,1344
+sub OP_FROMALTSTACK { Push pop @alt_S // die "empty alt stack" }OP_FROMALTSTACK29,1410
+sub OP_DROP  { Pop }OP_DROP30,1475
+sub OP_2DROP { Pop, Pop }OP_2DROP31,1496
+sub OP_DUP   { check_size 1; Push $S[$#S] }OP_DUP32,1522
+sub OP_2DUP  { check_size 2; Push @S[$#S-1,$#S] }OP_2DUP33,1566
+sub OP_3DUP  { check_size 3; Push @S[$#S-2 .. $#S] }OP_3DUP34,1616
+sub OP_2OVER { check_size 4; splice @S, -4, 0, @S[$#S-1,$#S] }OP_2OVER35,1669
+sub OP_2ROT  { check_size 6; Push splice @S, -6, 2 }OP_2ROT36,1732
+sub OP_2SWAP { check_size 4; Push splice @S, -4, 2 }OP_2SWAP37,1785
+sub OP_IFDUP { check_size 1; Push $S[$#S] if $S[$#S] }OP_IFDUP38,1838
+sub OP_DEPTH { Push scalar @S }OP_DEPTH39,1893
+sub OP_NIP   { check_size 2; splice @S, -2, 1 }OP_NIP40,1925
+sub OP_OVER  { check_size 2; Push $S[$#S-1] }OP_OVER41,1973
+sub OP_PICK  { check_size my $n = shift;  Push $S[$#S - $n + 1] }OP_PICK42,2019
+sub OP_ROLL  { check_size my $n = shift;  Push $S[$#S - $n + 1]; splice @S, -$n, 1 }OP_ROLL43,2085
+sub OP_ROT   { check_size 3; Push splice @S, -3, 1 }OP_ROT44,2170
+sub OP_SWAP  { OP_NIP OP_ROT OP_DUP }OP_SWAP45,2223
+sub OP_TUCK  { OP_ROT OP_ROT OP_DUP }OP_TUCK46,2261
+sub OP_SHA1      { use Digest::SHA qw(sha1);   Push sha1 OP_DROP }OP_SHA148,2300
+sub OP_SHA256    { use Digest::SHA qw(sha256); Push sha256 OP_DROP }OP_SHA25649,2367
+sub OP_HASH160   { use Bitcoin; Push Bitcoin::hash160 OP_DROP }OP_HASH16050,2436
+sub OP_HASH256   { use Bitcoin; Push Bitcoin::hash    OP_DROP }OP_HASH25651,2500
+use constant CODE => {CODE66,2997
+sub new {new227,14051
+sub binary_code { my $_ = shift; die 'empty code' if $_->{code} eq ''; pack 'H*', $_->{code}  }binary_code233,14232
+sub first_char  { my $_ = shift; ord substr $_->binary_code, 0, 1 }first_char234,14328
+sub data_length {data_length235,14396
+sub data_offset {data_offset244,14763
+sub decode {decode255,14993
+package Bitcoin::Script::OP;Bitcoin::Script::OP276,15739
+sub decode {decode278,15800
+package Bitcoin::Script::PushData;Bitcoin::Script::PushData288,16088
+sub decode {decode290,16155
+sub binary_data { my $_ = shift; substr $_->binary_code, $_->data_offset }binary_data303,16568
+package Bitcoin::Script::PushData::ASCII;Bitcoin::Script::PushData::ASCII305,16644
+sub decode {decode307,16728
+package Bitcoin::Script::PushData::PublicKey;Bitcoin::Script::PushData::PublicKey313,16812
+sub decode {decode316,16922
 
-Bitcoin/Wallet.pm,117
+template.pm,41
+package Bitcoin::NAMEBitcoin::NAME2,16
+
+Transaction.pm,346
+package Bitcoin::Transaction;Bitcoin::Transaction2,16
+sub new {new13,167
+sub serialize {serialize43,1267
+sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance62,2361
+sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class63,2459
+
+Wallet.pm,117
 package Bitcoin::Wallet;Bitcoin::Wallet2,19
 sub FETCH {FETCH13,181
 sub STORE {STORE20,364
 sub add {add29,799
 
-Bitcoin/template.pm,41
-package Bitcoin::NAMEBitcoin::NAME2,16
-
-Bitcoin/Network/CAddress.pm,67
-package Bitcoin::Network::CAddressBitcoin::Network::CAddress2,16
-
-Bitcoin/Electrum/Wallet.pm,480
-package Bitcoin::Electrum::Wallet;Bitcoin::Electrum::Wallet2,19
-use constant VERSION => 2;VERSION18,359
-use constant TEMPLATE => {TEMPLATE19,386
-sub passwdToCipher {passwdToCipher30,721
-sub new_seed {new_seed35,835
-sub wallet_dir {wallet_dir42,1014
-sub create_new_address {create_new_address52,1370
-sub recover {recover93,2671
-sub save {save99,2766
-sub is_mine {is_mine105,2912
-sub is_change {is_change110,3047
-sub get_new_address {get_new_address116,3200
-
-Bitcoin/Electrum/Client/GUI/GTK.pm,86
-package Bitcoin::Electrum::Client::GUI::GTK;Bitcoin::Electrum::Client::GUI::GTK2,19
-
-Bitcoin/Electrum/Client/GUI.pm,76
-package Bitcoin::Electrum::Client::GUI;Bitcoin::Electrum::Client::GUI2,19
-
-Bitcoin/Electrum/Mnemonic.pm,124
-package Bitcoin::Electrum::Mnemonic;Bitcoin::Electrum::Mnemonic2,16
-sub encode {encode10,189
-sub decode {decode22,451
-
-Bitcoin/Electrum/Client.pm,148
-package Bitcoin::Electrum::Client;Bitcoin::Electrum::Client9,247
-sub raw_tx {raw_tx30,562
-sub mktx {mktx80,1820
-sub request {request86,1894
-
-Bitcoin/PrivateKey.pm,593
-package Bitcoin::PrivateKey;Bitcoin::PrivateKey2,16
-use constant G => secp256k1->{G};G18,375
-use constant DUMMY_PASSWD => 'dummy password';DUMMY_PASSWD21,444
-sub size { 256 }size26,532
-sub default_version { 128 }default_version27,549
-sub toWIF { shift->toBase58 }toWIF30,599
-sub new {new60,1195
-sub value {value67,1377
-sub encrypt {encrypt73,1512
-sub decrypt {decrypt82,1779
-    sub cipher {cipher95,2128
-    sub randInt {randInt107,2387
-    sub public_point {public_point112,2539
-    sub address {address118,2669
-    sub _value_from_PEM {_value_from_PEM125,2842
-
-Bitcoin/Database.pm,124
-package Bitcoin::Database;Bitcoin::Database2,16
-use constant NAMES => qw(blkindex);NAMES7,83
-sub import {import22,608
-
-Bitcoin/Transaction.pm,346
-package Bitcoin::Transaction;Bitcoin::Transaction2,16
-sub new {new12,146
-sub serialize {serialize42,1230
-sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance61,2312
-sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class62,2410
-
-Bitcoin/Base58.pm,241
-package Bitcoin::Base58;Bitcoin::Base583,58
-    sub decode { shift =~ m/.$/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }decode20,297
-    sub encode { my $_ = shift; return encode($_/58) . (BASE58)[$_%58] if $_ > 0 } encode21,380
-
-EC/Curves.pm,81
-package EC::Curves;EC::Curves3,42
-use constant secp256k1 => {secp256k112,222
-
-EC/DSA/PrivateKey.pm,98
-package EC::DSA::PrivateKey;EC::DSA::PrivateKey2,16
-sub new {new10,123
-sub sign {sign16,404
-
-EC/DSA/PublicKey.pm,104
-package EC::DSA::PublicKey;EC::DSA::PublicKey2,16
-sub new {new10,122
-sub verifies {verifies17,468
-
-EC/DSA.pm,196
-package EC::DSA;EC::DSA2,16
-sub int_to_string {int_to_string9,93
-sub string_to_int {string_to_int13,243
-sub point_is_valid {point_is_valid18,350
-sub digest_integer {digest_integer25,572
-
-Bitcoin.pm,285
+../Bitcoin.pm,356
 package Bitcoin;Bitcoin2,19
 use constant BASE58	=> qw{BASE587,98
 sub hash160 {hash16032,886
-sub genesis { TEST ? GENESIS_TEST : GENESIS };genesis40,1053
-    sub hash     { sha256 sha256 shift }hash46,1159
-    sub hash_hex { unpack 'H*', reverse hash shift }hash_hex47,1200
+sub hash160_hex { return unpack 'H*', hash160 @_ }hash160_hex39,1052
+sub genesis { TEST ? GENESIS_TEST : GENESIS };genesis41,1104
+    sub hash     { sha256 sha256 shift }hash47,1210
+    sub hash_hex { unpack 'H*', reverse hash shift }hash_hex48,1251
 
-PadWalker.pm,33
-package PadWalker;PadWalker1,0
-
-EC.pm,285
+../EC.pm,285
 package EC;EC3,49
 sub set_param {set_param19,232
     sub Delta { -16*(4*$a**3 + 27*$b**2) }Delta27,364
     sub check {check28,407
-    sub Cmp {Cmp37,747
-    sub double {double41,877
-    sub add {add48,1114
-    sub mult {mult59,1544
-package EC::Point;EC::Point77,2003
+    sub Cmp {Cmp36,719
+    sub double {double40,849
+    sub add {add47,1086
+    sub mult {mult58,1516
+package EC::Point;EC::Point76,1975
 
-File/Map.pm,304
-package File::Map;File::Map1,0
-sub _check_layers {_check_layers55,1498
-sub _get_offset_length {_get_offset_length64,1748
-sub map_handle {map_handle77,2080
-sub map_file {map_file86,2391
-sub map_anonymous {map_anonymous104,3059
-sub sys_map {    ## no critic (ProhibitManyArgs)sys_map113,3391
-
-PerlIO/Layers.pm,272
-package PerlIO::Layers;PerlIO::Layers9,242
-sub _names_to_flags {_names_to_flags29,622
-sub _flag_names {_flag_names33,700
-sub _has_flags {_has_flags38,803
-sub _is_kind {_is_kind53,1170
-sub query_handle {query_handle110,2815
-sub get_layers {get_layers116,3002
-
-NumberTheory.pm,147
+../NumberTheory.pm,147
 package NumberTheory;NumberTheory2,16
 use constant DC_REGISTERS => 'DC_REGISTERS13,190
 sub dc {dc28,435
 sub inverse_mod {inverse_mod37,622
+
+../PadWalker.pm,33
+package PadWalker;PadWalker1,0
