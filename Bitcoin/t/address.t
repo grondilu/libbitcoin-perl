@@ -5,6 +5,7 @@ BEGIN { plan tests => 8, todo => [] }
 
 use Bitcoin::Address;
 
+new Bitcoin::Address '0x8fc7459ff249d98d8f9cec2d9fd9cd958b81caf8';
 use constant KEYS => [
     [ <<stop , '1QAVk6rZ8Tzj6665X3v1yPGfKwNHFjGV4y' ],
 -----BEGIN PUBLIC KEY-----
@@ -40,3 +41,4 @@ my $addr1 = new Bitcoin::Address KEYS->[0][0], 1;
 
 ok( $addr1->version, 1, "could not change version" );
 ok( $addr1->value, $addr->value );
+

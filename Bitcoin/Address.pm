@@ -60,6 +60,7 @@ use overload fallback => 'TRUE', q("") => sub { shift->toBase58 };
 	    die "wrong checksum" if $copy->checksum != $_->checksum;
 	    return $version eq $_->version ? $copy : new $class $_->value, $version;
 	}
+	elsif (m,^(?:0x)?[0-9A-F]{@{[$class->size/4]}}$,i)	{ new $class hex($_), $version }
 	elsif (m/^[@{[Bitcoin::BASE58]}]+$/i)		{
 	    my $_ = bless [
 		map { $_ / 256**4 / 2**$class->size, $_ / 256**4 % 2**$class->size, $_ % 256**4 }
@@ -67,7 +68,6 @@ use overload fallback => 'TRUE', q("") => sub { shift->toBase58 };
 	    ], $class;
 	    return new $class $_, $_->version;
 	}
-	elsif (m,^(?:0x)?[0-9A-F]{@{[$class->size/4]}}$,i)	{ new $class hex($_), $version }
 	elsif (m/-+BEGIN [^-]* KEY---/)			{ new $class $class->_value_from_PEM($_), $version }
 	else						{ die "wrong argument format" }
     }

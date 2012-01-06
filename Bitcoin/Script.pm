@@ -1,9 +1,7 @@
 #!/usr/bin/perl
-package Bitcoin::Script::Stack;
+package Bitcoin::Script;
 use strict;
 use warnings;
-
-=begin comment
 
 my (@S, @alt_S);
 sub check_size { die "stack is too small" if @S < shift }
@@ -30,52 +28,23 @@ sub OP_ROT   { check_size 3; Push splice @S, -3, 1 }
 sub OP_SWAP  { OP_NIP OP_ROT OP_DUP }
 sub OP_TUCK  { OP_ROT OP_ROT OP_DUP }
 
-sub OP_0	{ Push 0 }
-sub OP_1NEGATE  { Push -1 }
-sub OP_ADD      { Push OP_DROP() + OP_DROP() }
-sub OP_MUL      { Push OP_DROP() * OP_DROP() }
-sub OP_DIV      { use integer; Push OP_DROP() / OP_DROP() }
-sub OP_MOD      { Push OP_DROP() % OP_DROP() }
-sub OP_LSHIFT   { Push OP_DROP() << OP_DROP() }
-sub OP_RSHIFT   { Push OP_DROP() >> OP_DROP() }
-sub OP_BOOLAND  { Push OP_DROP ? OP_DROP() : (OP_DROP, 0) }  # using ternary to avoid laziness
-sub OP_BOOLOR   { Push OP_DROP ? (OP_DROP, 1) : OP_DROP }  # using ternary to avoid laziness
-sub OP_NUMEQUAL { Push OP_DROP() == OP_DROP() }
-sub OP_NUMEQUALVERIFY { OP_NUMEQUAL; die "OP_NUMEQUALVERIFY" unless OP_DROP }
-sub OP_LESSTHAN { Push OP_DROP < OP_DROP }
-sub OP_GREATERTHAN { Push OP_DROP > OP_DROP }
-sub OP_GREATERTHANOREQUAL { Push OP_DROP >= OP_DROP }
-sub OP_MIN      { (OP_DROP OP_LESSTHAN OP_2DUP) ? OP_NIP : OP_DROP }
-sub OP_MAX      { (OP_DROP OP_LESSTHAN OP_2DUP) ? OP_DROP : OP_NIP }
-
-sub OP_WITHIN   { OP_BOOLAND OP_LESSTHAN OP_ROT OP_ROT OP_LESSTHAN OP_OVER OP_SWAP OP_ROT }
-
-sub OP_RIPEMD160 { Push qx/perl -e 'print pack "b*", '@{[unpack 'b*', OP_DROP]}' | openssl dgst -rmd160 -binary/ }
 sub OP_SHA1      { use Digest::SHA qw(sha1);   Push sha1 OP_DROP }
 sub OP_SHA256    { use Digest::SHA qw(sha256); Push sha256 OP_DROP }
 sub OP_HASH160   { use Bitcoin; Push Bitcoin::hash160 OP_DROP }
 sub OP_HASH256   { use Bitcoin; Push Bitcoin::hash    OP_DROP }
 
-sub OP_1ADD        { OP_ADD OP_1 }
-sub OP_1SUB        { OP_ADD OP_1NEGATE }
-sub OP_2MUL        { Push OP_DROP << 1 }
-sub OP_2DIV        { Push OP_DROP >> 1 }
-sub OP_NEGATE      { OP_MUL OP_1NEGATE }
-sub OP_ABS         { Push abs OP_DROP }
-sub OP_NOT         { Push not OP_DROP }
-sub OP_0NOTEQUAL   { Push OP_DROP != 0 }
+no strict 'subs';
+use constant {
+    OP_0		=> [   0, sub {...} ], OP_FALSE	=> OP_0,
+    OP_PUSHDATA1	=> [  76, sub {...} ],
+    OP_PUSHDATA2	=> [  77, sub {...} ],
+    OP_PUSHDATA4	=> [  78, sub {...} ],
+    OP_1NEGATE		=> [  79, sub {...} ],
+    OP_1		=> [  80, sub {...} ],
 
-sub OP_CAT           { check_size 2; Push OP_DROP() . OP_DROP }
-sub OP_SUBSTR        { check_size 3; OP_SWAP; OP_ROT; Push substr OP_DROP, OP_DROP, OP_DROP }
-sub OP_LEFT          { check_size 2; OP_SUBSTR OP_SWAP OP_0 }
-sub OP_RIGHT         { check_size 2; OP_SUBSTR OP_SWAP OP_NEGATE OP_DUP }
-sub OP_SIZE          { check_size 1; OP_DUP; Push scalar map undef, OP_DROP =~ /./mgs }
-sub OP_INVERT        { check_size 1; Push ~OP_DROP }
-sub OP_AND           { check_size 2; Push OP_DROP() & OP_DROP }
-sub OP_OR            { check_size 2; Push OP_DROP() | OP_DROP }
-sub OP_XOR           { check_size 2; Push OP_DROP() ^ OP_DROP }
-sub OP_EQUAL         { check_size 2; Push OP_DROP() eq OP_DROP }
-sub OP_EQUALVERIFY   { die "OP_EQUALVERIFY" unless OP_DROP OP_EQUAL }
+    OP_RIPEMD160	=> [ 166, sub { Push qx/perl -e 'print pack "b*", '@{[unpack 'b*', OP_DROP]}' | openssl dgst -rmd160 -binary/ } ],
+};
+use strict 'subs';
 
 use constant CODE => {
 
@@ -237,13 +206,6 @@ use constant CODE => {
     # }}}
 
 };                              
-=end comment
-
-=cut
-                                
-package Bitcoin::Script;
-use strict;
-use warnings;
 
 sub new {
     my $class = shift; do {...} if ref $class;
@@ -300,18 +262,19 @@ sub decode {
     my $this = shift; do {...} unless ref $this;
     return if $this->{code} eq '';
     $this->{value} = hex $this->{code};
+    $this->{name} = {
+	map { Bitcoin::Script::CODE->{$_} => $_ } keys %{+Bitcoin::Script::CODE}
+    }->{$this->{value}} // 'N/A';
     return $this;
 }
 
 package Bitcoin::Script::PushData;
 our @ISA = qw(Bitcoin::Script);
-use MIME::QuotedPrint;
 sub decode {
     my $this = shift; do {...} unless ref $this;
     return if $this->{code} eq '';
     my $first_char = $this->first_char;
-    my $data = substr $this->binary_code, $this->data_offset;
-    $this->{data}  = encode_qp $data;
+    my $data = $this->binary_data;
     if ($data =~ /\A[ [:ascii:] ]{4,}\Z/x ) {
 	return +(bless $this, ref($this).'::ASCII')->decode;
     }
@@ -320,7 +283,7 @@ sub decode {
     }
     else { return $this }
 }
-sub binary_data { my $_ = shift; decode_qp $_->{data} }
+sub binary_data { my $_ = shift; substr $_->binary_code, $_->data_offset }
 
 package Bitcoin::Script::PushData::ASCII;
 our @ISA = qw(Bitcoin::Script::PushData);
@@ -334,8 +297,9 @@ package Bitcoin::Script::PushData::PublicKey;
 our @ISA = qw(Bitcoin::Script::PushData);
 use Bitcoin::Address;
 sub decode {
+    use bigint;
     my $_ = shift;
-    $_->{address} = ''. new Bitcoin::Address
+    $_->{address} = ''. new Bitcoin::Address 
     unpack 'H*', Bitcoin::hash160 reverse $_->binary_data;
     return $_;
 }
