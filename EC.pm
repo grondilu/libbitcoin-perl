@@ -8,7 +8,6 @@ use NumberTheory qw(inverse_mod);
 
 our ($a, $b, $p);
 
-sub set_param;
 sub Delta;
 sub check;
 sub Cmp;
@@ -30,11 +29,8 @@ sub import {
 	($a, $b, $p) = map ${$EC::Curves::{$curve}}->{$_}, qw( a b p );
     }
     else { die 'wrong import syntax' }
-}
-
-sub set_param {
-    if (@_ > 1) { set_param { @_ } }
-    else { ($a, $b, $p) = map $_[0]->{$_}, qw( a b p ) }
+    die "curve parameters are not defined" unless defined $a and defined $b and defined $p;
+    die "curve has nul discriminant" if Delta == 0;
 }
 
 {
@@ -44,7 +40,7 @@ sub set_param {
     sub check {
 	my $u = shift;
 	return $u unless @$u;
-	die "curve parameters are not defined" unless defined $a and defined $b;
+	die "curve parameters are not defined" unless defined $a and defined $b and defined $p;
 	die "curve has nul discriminant" if Delta == 0;
 	die "point is not on elliptic curve" unless ($$u[1]**2 - $$u[0]**3 - $a*$$u[0] - $b) % $p == 0;
 	return bless $u, 'EC::Point';
@@ -126,7 +122,6 @@ EC - Elliptic Curve calculations in Perl
     $point = EC::double $point;
     $point = EC::mult 7, $point;
     $point = EC::add $point, EC::double $point;
-    bless $point, 'Point';
     my $point18 = 17 * $point + $point;
 
 =head1 DESCRIPTION
@@ -136,8 +131,13 @@ This module provides functions to perform arithmetics in Elliptic Curves.
 A point is just a blessed reference to an array of integers, the third, optionnal one,
 being the order.  A point at the infinite is a reference to the empty array.
 
-A small EC::Point class can be used to bless points and handle them using overloaded
-addition, multiplication and stringification operators.
+A small EC::Point class overloads addition, multiplication and stringification operators.
+
+This module DOES NOT perform ECDSA cryptography.  See EC::DSA.
+
+=head1 SEE ALSO
+
+EC::DSA, EC::Curves
 
 =head1 AUTHOR
 

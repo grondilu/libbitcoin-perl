@@ -3,11 +3,11 @@ package Bitcoin::DataStream;
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(CHAR UCHAR BYTE INT16 UINT16 INT32 UINT32 INT64 UINT64 STRING);
+%EXPORT_TAGS = ( types => [ @EXPORT_OK ] );
 use strict;
 use warnings;
 
-# constants
-#
+# data types
 use constant {
     BYTE	=> 'a',
     CHAR	=> 'c',
@@ -32,7 +32,6 @@ sub seek_file;
 sub close_file;
 sub read_compact_size;
 sub write_compact_size;
-sub read_string;
 sub write_string;
 sub read_bytes;
 
@@ -70,10 +69,8 @@ sub Read {
     my $_ = shift->_no_class;
     die "data stream is empty" if $_->[1] eq '';
     my $what_to_read = shift;
-    return $_->read_string if $what_to_read eq STRING;
-    #my $length = calc_size $what_to_read;
     my $length = $what_to_read eq STRING ? $_->read_compact_size : calc_size $what_to_read;
-    die "buffer overflow" if $length > length($_->[1]) - $_->[0];
+    die "index out of buffer" if $length > length($_->[1]) - $_->[0];
     my $result = unpack $what_to_read, substr $_->[1], $_->[0], $length;
     $_->[0] += $length;
     return $result;
@@ -82,16 +79,10 @@ sub Read {
 sub Write {
     my $_ = shift->_no_class;
     my $what_to_write = shift;
+    die 'argument expected' unless defined $what_to_write;
     my $arg = shift;
-    return $_->write_string($arg) if $what_to_write eq STRING;
+    $_->write_compact_size(Length $arg) if $what_to_write eq STRING;
     $_->[1] .= defined $arg ? pack $what_to_write, $arg : $what_to_write;
-}
-
-sub read_string {
-    my $_ = shift->_no_class;
-    die "data stream is empty" if $_->[1] eq '';
-    my $length = $_->read_compact_size;
-    $_->read_bytes($length);
 }
 
 sub write_string {
@@ -99,15 +90,6 @@ sub write_string {
     my $string = shift;
     $_->write_compact_size(Length $string);
     $_->[1] .= $string;
-}
-
-sub read_bytes {
-    my $_ = shift->_no_class;
-    my $length = shift;
-    die "buffer overflow" if $length > length($_->[1]) - $_->[0];
-    my $result = substr $_->[1], $_->[0], $length;
-    $_->[0] += $length;
-    return $result;
 }
 
 sub read_compact_size {
@@ -129,7 +111,7 @@ sub write_compact_size {
     else                { $_->[1] .= "\xff" . pack UINT64, shift }
 }
 
-sub Length { scalar map 1, shift =~ /./msg }
+sub Length { length unpack 'a*', shift }
 sub calc_size {
     my $_ = shift;
     /c$/i ? 1 :
@@ -166,6 +148,22 @@ sub _write_num {
     $_->[1] .= pack @_[0,1];
 }
 
+sub read_string {
+    my $_ = shift->_no_class;
+    die "data stream is empty" if $_->[1] eq '';
+    my $length = $_->read_compact_size;
+    $_->read_bytes($length);
+}
+
+sub read_bytes {
+    my $_ = shift->_no_class;
+    my $length = shift;
+    die "buffer overflow" if $length > length($_->[1]) - $_->[0];
+    my $result = substr $_->[1], $_->[0], $length;
+    $_->[0] += $length;
+    return $result;
+}
+
 sub read_boolean  { return substr(shift->read_bytes(1), 0, 1) ne chr 0 }
 sub read_int16    { return shift->_read_num('s') }
 sub read_uint16   { return shift->_read_num('S') }
@@ -190,10 +188,12 @@ Bitcoin::DataStream
 
 =head1 SYNOPSIS
 
-    use Bitcoin::DataStream;
+    use Bitcoin::DataStream qw( :types );
 
     $ds = new Bitcoin::DataStream;
-    $ds->write_string("foo");
+    $ds->Write(STRING, "foo");
+    $ds->Write(UINT32, 2**24 + 3**5);
+    $ds->Write(STRING, "foo");
 
 =head1 DESCRIPTION
 
