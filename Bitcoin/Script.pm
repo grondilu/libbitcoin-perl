@@ -1,22 +1,23 @@
 #!/usr/bin/perl
 package Bitcoin::Script;
-require Exporter;
-@ISA =qw(Exporter);
-@EXPORT = qw(op_0 op_pushdata1 op_pushdata2 op_pushdata4 op_1negate op_1
-op_2 op_3 op_4 op_5 op_6 op_7 op_8 op_9 op_10 op_11 op_12 op_13 op_14 op_15
-op_16 op_nop op_if op_notif op_else op_endif op_verify op_return op_toaltstack
-op_fromaltstack op_ifdup op_depth op_drop op_dup op_nip op_over op_pick op_roll
-op_rot op_swap op_tuck op_2drop op_2dup op_3dup op_2over op_2rot op_2swap
-op_cat op_substr op_left op_right op_size op_invert op_and op_or op_xor
-op_equal op_equalverify op_1add op_1sub op_2mul op_2div op_negate op_abs op_not
-op_0notequal op_add op_sub op_mul op_div op_mod op_lshift op_rshift op_booland
-op_boolor op_numequal op_numequalverify op_numnotequal op_lessthan
-op_greaterthan op_lessthanorequal op_greaterthanorequal op_min op_max op_within
-op_ripemd160 op_sha1 op_sha256 op_hash160 op_hash256 op_codeseparator
-op_checksig op_checksigverify op_checkmultisig op_checkmultisigverify
-op_pubkeyhash op_pubkey op_invalidopcode op_reserved op_ver op_verif
-op_vernotif op_reserved1 op_reserved2 op_nop1 op_nop2 op_nop3 op_nop4 op_nop5
-op_nop6 op_nop7 op_nop8 op_nop9 op_nop10);
+#require Exporter;
+#@ISA =qw(Exporter);
+#@EXPORT = qw(op_0 op_pushdata1 op_pushdata2 op_pushdata4 op_1negate op_1
+#op_2 op_3 op_4 op_5 op_6 op_7 op_8 op_9 op_10 op_11 op_12 op_13 op_14 op_15
+#op_16 op_nop op_if op_notif op_else op_endif op_verify op_return op_toaltstack
+#op_fromaltstack op_ifdup op_depth op_drop op_dup op_nip op_over op_pick op_roll
+#op_rot op_swap op_tuck op_2drop op_2dup op_3dup op_2over op_2rot op_2swap
+#op_cat op_substr op_left op_right op_size op_invert op_and op_or op_xor
+#op_equal op_equalverify op_1add op_1sub op_2mul op_2div op_negate op_abs op_not
+#op_0notequal op_add op_sub op_mul op_div op_mod op_lshift op_rshift op_booland
+#op_boolor op_numequal op_numequalverify op_numnotequal op_lessthan
+#op_greaterthan op_lessthanorequal op_greaterthanorequal op_min op_max op_within
+#op_ripemd160 op_sha1 op_sha256 op_hash160 op_hash256 op_codeseparator
+#op_checksig op_checksigverify op_checkmultisig op_checkmultisigverify
+#op_pubkeyhash op_pubkey op_invalidopcode op_reserved op_ver op_verif
+#op_vernotif op_reserved1 op_reserved2 op_nop1 op_nop2 op_nop3 op_nop4 op_nop5
+#op_nop6 op_nop7 op_nop8 op_nop9 op_nop10);
+use v5.14;
 use strict;
 use warnings;
 
@@ -68,6 +69,7 @@ use constant CODE => {
     # {{{ Constants
     OP_0 => 0, OP_FALSE	=> 0,   # An empty array of bytes is pushed onto the stack. (This is not a no-op: an item is added to the stack.)
     #  1, 2, ..., 75            # The next opcode bytes is data to be pushed onto the stack
+#    (map { 'OP_PUSHDATA0_'.$_ => $_ } 1 .. 75),
     OP_PUSHDATA1 => 76,         # The next byte      contains the number of bytes to be pushed onto the stack.
     OP_PUSHDATA2 => 77,         # The next two bytes contain  the number of bytes to be pushed onto the stack.
     OP_PUSHDATA4 => 78,         # The next four byte contain  the number of bytes to be pushed onto the stack.
@@ -224,102 +226,90 @@ use constant CODE => {
 
 };                              
 
+use overload '+' => sub { bless [ @{$_[0]}, @{$_[1]} ] };
 sub new {
-    my $class = shift; do {...} if ref $class;
-    my $arg = shift; do {...} if ref $arg;
-    my $this = bless { code => unpack 'H*', $arg }, $class;
-    $this->decode;
-}
-sub binary_code { my $_ = shift; die 'empty code' if $_->{code} eq ''; pack 'H*', $_->{code}  }
-sub first_char  { my $_ = shift; ord substr $_->binary_code, 0, 1 }
-sub data_length {
-    my $this = shift; do {...} unless ref $this;
-    my $first_char = $this->first_char;
-    $first_char  < 76 ? $first_char :
-    $first_char == 76 ?          ord substr $this->binary_code, 1, 1 :
-    $first_char == 77 ? unpack 'S>', substr $this->binary_code, 1, 2 :
-    $first_char == 78 ? unpack 'L>', substr $this->binary_code, 1, 4 :
-    0;
-}
-sub data_offset {
-    my $this = shift; do {...} unless ref $this;
-    my $first_char = $this->first_char;
-    $first_char  < 76 ? 1 :
-    $first_char == 76 ? 2 :
-    $first_char == 77 ? 3 :
-    $first_char == 78 ? 5 :
-    0;
-}
-
-
-sub decode {
-    my $this = shift; do {...} unless ref $this;
-    return if $this->{code} eq '';
-    my @decode;
-    my $binary_code = $this->binary_code;
-    my $first_char  = $this->first_char;
-    my $data_length = $this->data_length;
-    my $data_offset = $this->data_offset;
-    if ($first_char < 79 and $first_char > 0) {
-	push @decode, (ref($this).'::PushData')->new(substr $binary_code, 0, $data_offset + $data_length);
-    }
+    my $class = shift; die 'no instance method call' if ref $class;
+    my $arg = shift;
+    if    (ref $arg)   {...}
+    elsif ($arg eq '') { bless [], $class }
     else {
-	push @decode, (ref($this).'::OP')->new(chr $first_char);
-	$data_length = 1;
+	my $first_atom = do {
+	    given(ord substr $arg, 0, 1) {
+		when([1 .. 78])      { ($class.'::PushData')->new($arg) }
+		when([0, 79 .. 255]) { ($class.'::OP')->new(substr $arg, 0, 1) }
+		default { die 'unexpected value' }
+	    }
+	};
+	bless [ $first_atom, @{$class->new(substr $arg, $first_atom->_length)} ], $class;
     }
-    my $remain = substr $binary_code, $data_offset + $data_length;
-    push @decode, @{ref($this)->new($remain)->{decode} // []} unless $remain eq '';
-    $this->{decode} = [ @decode ] if @decode;
-    return $this;
 }
+sub code {
+    my $this = shift;  die 'class method call not implemented' unless ref $this;
+    join '', map $_->code, @$this;
+}
+
+package Bitcoin::Script::Atom;
+use overload q(@{}) => sub { [ shift ] };
+our @ISA = qw(Bitcoin::Script);
+sub new {
+    my $class = shift; die 'no class method call' if ref $class;
+    my $arg   = shift;
+    my $first_char_ord = ord substr $arg, 0, 1;
+    bless {
+	'op_code' =>
+	{ map { Bitcoin::Script::CODE->{$_} => $_ } keys %{+Bitcoin::Script::CODE} }->{$first_char_ord} // 'N/A',
+    }, $class;
+}
+sub code { my $_ = shift; $_->{code} // sprintf '%2x', Bitcoin::Script::CODE->{$_->{op_code}} }
+sub _length { my $_ = shift; length($_->{code} // $_->{op_code}) /2 }
 
 package Bitcoin::Script::OP;
-our @ISA = qw(Bitcoin::Script);
-sub decode {
-    my $this = shift; do {...} unless ref $this;
-    return if $this->{code} eq '';
-    $this->{value} = hex $this->{code};
-    $this->{name} = {
-	map { Bitcoin::Script::CODE->{$_} => $_ } keys %{+Bitcoin::Script::CODE}
-    }->{$this->{value}} // 'N/A';
+our @ISA = qw(Bitcoin::Script::Atom);
+use overload q(@{}) => sub { [ shift ] };
+sub new {
+    my $class = shift; die 'no class method call' if ref $class;
+    my $arg   = shift;
+    my $this = $class->SUPER::new($arg);
+    $this->{code} = unpack 'H*', substr $arg, 0, 1;
     return $this;
 }
 
 package Bitcoin::Script::PushData;
-our @ISA = qw(Bitcoin::Script);
-sub decode {
-    my $this = shift; do {...} unless ref $this;
-    return if $this->{code} eq '';
-    my $first_char = $this->first_char;
-    my $data = $this->binary_data;
-    if ($data =~ /\A[ [:ascii:] ]{4,}\Z/x ) {
-	return +(bless $this, ref($this).'::ASCII')->decode;
+our @ISA = qw(Bitcoin::Script::Atom);
+sub new {
+    my $class = shift; die 'no class method call' if ref $class;
+    my $arg = shift;
+    my $this = $class->SUPER::new($arg);
+    my ($offset, $length) = do {
+	given (ord substr $arg, 0, 1) {
+	    when([0 .. 75]) { 1, $_ }
+	    when(      76 ) { 2, ord          substr $arg, 1, 1 }
+	    when(      77 ) { 3, unpack 'S>', substr $arg, 1, 2 }
+	    when(      78 ) { 5, unpack 'L>', substr $arg, 1, 4 }
+	    default  { die 'unexpected value' }
+	}
+    };
+    $this->{code} = unpack 'H*', substr $arg, 0, $offset + $length;
+    for (substr $arg, $offset, $length) {
+	if (/\A[ [:ascii:] ]{4,}\Z/x ) {
+	    $this->{text} = $_;
+	    return bless $this, ref($this).'::ASCII';
+	}
+	elsif (/\A\x{04}.{64}+\Z/m)    {
+	    use Bitcoin::Address;
+	    use bigint;
+	    $this->{address} = ''. new Bitcoin::Address Bitcoin::hash160 $_;
+	    return bless $this, ref($this).'::PublicKey';
+	}
+	else { return $this }
     }
-    elsif ($data =~ /\A\x{04}.{64}+\Z/m) {
-	return +(bless $this, ref($this).'::PublicKey')->decode;
-    }
-    else { return $this }
 }
-sub binary_data { my $_ = shift; substr $_->binary_code, $_->data_offset }
 
 package Bitcoin::Script::PushData::ASCII;
 our @ISA = qw(Bitcoin::Script::PushData);
-sub decode {
-    my $_ = shift;
-    $_->{text} = $_->binary_data;
-    return $_;
-}
 
 package Bitcoin::Script::PushData::PublicKey;
 our @ISA = qw(Bitcoin::Script::PushData);
-use Bitcoin::Address;
-sub decode {
-    require Bitcoin;
-    use bigint;
-    my $_ = shift;
-    $_->{address} = ''. new Bitcoin::Address Bitcoin::hash160 $_->binary_data;
-    return $_;
-}
 
 1;
 

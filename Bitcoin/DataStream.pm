@@ -4,6 +4,7 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(CHAR UCHAR BYTE INT16 UINT16 INT32 UINT32 INT64 UINT64 STRING);
 %EXPORT_TAGS = ( types => [ @EXPORT_OK ] );
+use v5.14;
 use strict;
 use warnings;
 
@@ -92,6 +93,15 @@ sub write_string {
     $_->[1] .= $string;
 }
 
+sub read_bytes {
+    my $_ = shift->_no_class;
+    my $length = shift;
+    die "buffer overflow" if $length > length($_->[1]) - $_->[0];
+    my $result = substr $_->[1], $_->[0], $length;
+    $_->[0] += $length;
+    return $result;
+}
+
 sub read_compact_size {
     my $_ = shift->_no_class;
     my $size = ord substr $_->[1], $_->[0]++, 1;
@@ -153,15 +163,6 @@ sub read_string {
     die "data stream is empty" if $_->[1] eq '';
     my $length = $_->read_compact_size;
     $_->read_bytes($length);
-}
-
-sub read_bytes {
-    my $_ = shift->_no_class;
-    my $length = shift;
-    die "buffer overflow" if $length > length($_->[1]) - $_->[0];
-    my $result = substr $_->[1], $_->[0], $length;
-    $_->[0] += $length;
-    return $result;
 }
 
 sub read_boolean  { return substr(shift->read_bytes(1), 0, 1) ne chr 0 }

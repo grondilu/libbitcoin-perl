@@ -17,8 +17,8 @@ sub new {
     if (ref $arg eq 'Bitcoin::DataStream') {
 	my $this = bless({
 		version        => $arg->Read(INT32),
-		hashPrev       => unpack('H*', reverse $arg->Read(BYTE . 32)),
-		hashMerkleRoot => unpack('H*', reverse $arg->Read(BYTE . 32)),
+		hashPrev       => unpack('H*', reverse $arg->read_bytes(32)),
+		hashMerkleRoot => unpack('H*', reverse $arg->read_bytes(32)),
 		nTime          => $arg->Read(UINT32),
 		nBits          => $arg->Read(UINT32),
 		nNonce         => $arg->Read(UINT32),
@@ -28,7 +28,7 @@ sub new {
 
 	if ($this->{version} & (1 << 8)) {
 	    my $merkle_tx = new Bitcoin::Transaction $arg;
-	    $merkle_tx->{chainMerkleBranch} = $arg->Read(BYTE . (32*$arg->read_compact_size));
+	    $merkle_tx->{chainMerkleBranch} = $arg->read_bytes(32*$arg->read_compact_size);
 	    $merkle_tx->{chainIndex} = $arg->Read(INT32);
 	    $merkle_tx->{parentBlock} = ($class.'::HEADER')->new($arg);
 	}
@@ -65,7 +65,7 @@ sub new {
 		$cursor->c_get($k, $v, BerkeleyDB::DB_SET_RANGE);
 		do {
 		    my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
-		    last SEARCH if $kds->read_string ne 'blockindex';
+		    last SEARCH if $kds->Read(STRING) ne 'blockindex';
 		    my $hash = unpack 'H*', reverse $kds->Read(BYTE . 32);
 		    if (ref $arg eq 'Regexp') { push @result, $hash if $hash =~ $arg }
 		    else {
