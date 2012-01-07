@@ -9,12 +9,11 @@ use warnings;
 use Bitcoin;
 use Bitcoin::Address;
 
-use EC;
-use EC::Curves qw(secp256k1);
-EC::set_param secp256k1;
+use EC qw(secp256k1);
 
 # group generator
-use constant G => secp256k1->{G};
+use EC::Curves;
+use constant G => EC::Curves::secp256k1->{G};
 
 # default password for encryption
 use constant DUMMY_PASSWD => 'dummy password';

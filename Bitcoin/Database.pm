@@ -16,7 +16,7 @@ END { undef $blkindex, untie %blkindex if defined $blkindex }
 
 our $Env = new BerkeleyDB::Env  
     -Home => Bitcoin::DATA_DIR,
-    -Flags => DB_CREATE| DB_INIT_LOCK| DB_INIT_LOG| DB_INIT_MPOOL| DB_INIT_TXN| DB_THREAD| DB_RECOVER
+    -Flags => DB_CREATE| DB_INIT_LOCK| DB_INIT_LOG| DB_INIT_MPOOL| DB_INIT_TXN| DB_THREAD| DB_RECOVER,
 ;
 
 sub import {

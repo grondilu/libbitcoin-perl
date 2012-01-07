@@ -13,11 +13,13 @@ sub decode;
 sub encode;
 
 my %b58 = map { (BASE58)[$_] => $_ } 0 .. 57;
+my $b58 = qr/[@{[BASE58]}]/x;
 
 {
     use bigint;
+    use integer;
 
-    sub decode { shift =~ m/.$/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }
+    sub decode { shift =~ m/$b58\Z/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }
     sub encode { my $_ = shift; return encode($_/58) . (BASE58)[$_%58] if $_ > 0 } 
 }
 
@@ -42,8 +44,10 @@ no warnings 'once';
 sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }
 sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }
 
-use overload fallback => 'TRUE', q("") => sub { shift->toBase58 };
+# stringification overloading
+use overload fallback => 'TRUE', q("") => sub { shift->to_base58 };
 
+# definitions for non virtual methods
 sub value   { shift->_no_class->[0] }
 sub data    { pack 'H*', shift->_no_class->value->as_hex =~ s/0x//r }
 sub version { my $_ = shift; ref() ? $_->[1] // ref->default_version : $_->default_version }
@@ -112,16 +116,22 @@ Bitcoin::Base58
     my $i = rand(1000);
     decode(encode $i) == $i;   # True
 
+    package My::Base58::Encoded::Class;
+    @ISA = qw(Bitcoin::Base58::Data);
+
+    sub size() { 1024 }
+    sub default_version() { 1 }
+
 =head1 DESCRIPTION
 
 This module implements Satoshi Nakamoto's Base58 encoding.
 
-It DOES NOT implement checksum or version padding that is present in a bitcoin
-address.  To do this, use the Bitcoin::Address module.
+It also contains a virtual class, Bitcoin::Base58::Data, which can be used
+to implement the version+checksum system used with bitcoin addresses and private keys.
 
-=head1 BUGS
-
-Probably none, at least with Perl 5.14
+To do so, you need to inherit your class from Bitcoin::Base58::Data, and then
+define C<size()> and C<default_version()>.  Make sure you explicitely use an
+empty prototype.
 
 =head1 AUTHOR
 

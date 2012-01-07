@@ -51,11 +51,6 @@ sub new {
 	if ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) {
 	    $k .= reverse pack 'H*', $arg;
 	    $cursor->c_get($k, $v, BerkeleyDB::DB_SET);
-	    if ($cursor->status) {
-		# trying the hash in reverse order
-		$k = $prefix . pack 'H*', $arg;
-		$cursor->c_get($k, $v, BerkeleyDB::DB_SET);
-	    }
 	    die 'no such block' if $cursor->status;
 	    die "block entry was removed" unless defined $v;
 	    my $vds = new Bitcoin::DataStream $v;

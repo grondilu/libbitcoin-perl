@@ -16,6 +16,22 @@ sub double;
 sub add;
 sub mult;
 
+sub import {
+    my $class = shift;
+    return unless @_;
+    if (@_ > 1 and not @_ % 2) { $class->import( { @_ } ) }
+    elsif (@_ == 1 and ref $_[0] eq 'HASH') {
+	($a, $b, $p) = map $_[0]->{$_}, qw( a b p );
+    }
+    elsif (@_ == 1 and not ref $_[0]) {
+	use EC::Curves;
+	my $curve = shift;
+	die 'unknown curve' unless exists $EC::Curves::{$curve};
+	($a, $b, $p) = map ${$EC::Curves::{$curve}}->{$_}, qw( a b p );
+    }
+    else { die 'wrong import syntax' }
+}
+
 sub set_param {
     if (@_ > 1) { set_param { @_ } }
     else { ($a, $b, $p) = map $_[0]->{$_}, qw( a b p ) }
@@ -84,6 +100,14 @@ q("") => sub {
     'Point at horizon';
 };
 
+package EC::BigInt;
+our @ISA = qw(Math::BigInt);
+use overload
+'*' => sub {
+    return EC::mult $_[0], $_[1] if ref $_[1] eq 'EC::Point';
+    $_[0]->bmul($_[1]);
+};
+
 1;
 
 __END__
@@ -94,10 +118,9 @@ EC - Elliptic Curve calculations in Perl
 
 =head1 SYNOPSIS
 
-    use EC;
-    EC::set_param a => 0, b => 2, p => 193;
+    use EC qw( a 0 b 2 p 193 );
     # or
-    EC::set_param { a => 0, b => 2, p => 193 };
+    use EC qw( secp256k1 );
 
     my $point = EC::check [ 1, 14 ];
     $point = EC::double $point;
@@ -110,15 +133,11 @@ EC - Elliptic Curve calculations in Perl
 
 This module provides functions to perform arithmetics in Elliptic Curves.
 
-A point is just a blessed reference to an array of integers, the third, optionnal one
+A point is just a blessed reference to an array of integers, the third, optionnal one,
 being the order.  A point at the infinite is a reference to the empty array.
 
 A small EC::Point class can be used to bless points and handle them using overloaded
 addition, multiplication and stringification operators.
-
-=head1 BUGS
-
-The overloading of '*' is an issue when the left operand is a BigInt.
 
 =head1 AUTHOR
 

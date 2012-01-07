@@ -15,6 +15,7 @@ use constant {
     GENESIS             => '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f',
     GENESIS_TEST    	=> '00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008',
     TIMES20090103       => 'The Times 03/Jan/2009 Chancellor on brink of second bailout for banks',
+    AUTHOR		=> 'Satoshi Nakamoto',
 
     DATA_DIR		=> $ENV{HOME}.'/.bitcoin',
 
@@ -38,7 +39,7 @@ sub hash160 {
 }
 sub hash160_hex { return unpack 'H*', hash160 @_ }
 
-sub genesis { TEST ? GENESIS_TEST : GENESIS };
+sub genesis() { TEST ? GENESIS_TEST : GENESIS };
 
 sub hash;
 sub hash_hex;
@@ -67,7 +68,8 @@ Bitcoin
 =head1 DESCRIPTION
 
 Bitcoin is a peer-to-peer electronic cash system created in 2009 by Satoshi Nakamoto.  This module
-and its submodules implement several tools for bitcoin-related operations.
+and its submodules implement several tools for bitcoin-related operations.  This is part of a project aiming
+at a full Perl implementation of the bitcoin protocol.
 
 This particular module implements bitcoin's specific constants and functions
 that didn't fit in any subcategories.
@@ -137,6 +139,12 @@ Bitcoin::Address, Bitcoin::PrivateKey, Bitcoin::Base58, EC, EC::DSA
 =head1 AUTHOR
 
 L Grondin <grondilu@yahoo.fr>
+
+=head1 CREDITS
+
+Most of this code is inspired from Gavin Andersen's bitcointools, ThomasV's
+Electrum project, and of course from Satoshi Nakamoto's reference
+implementation in C++.
 
 =head1 COPYRIGHT AND LICENSE
 

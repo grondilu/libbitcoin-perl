@@ -306,7 +306,7 @@ package Bitcoin::Script::PushData::ASCII;
 our @ISA = qw(Bitcoin::Script::PushData);
 sub decode {
     my $_ = shift;
-    $_->{data} = $_->binary_data;
+    $_->{text} = $_->binary_data;
     return $_;
 }
 
@@ -317,7 +317,7 @@ sub decode {
     require Bitcoin;
     use bigint;
     my $_ = shift;
-    $_->{address} = ''. new Bitcoin::Address '0x'. Bitcoin::hash160_hex reverse $_->binary_data;
+    $_->{address} = ''. new Bitcoin::Address Bitcoin::hash160 $_->binary_data;
     return $_;
 }
 
