@@ -5,7 +5,7 @@ use warnings;
 
 use Bitcoin;
 use Bitcoin::Database;
-use Bitcoin::DataStream;
+use Bitcoin::DataStream qw(:types);
 use Bitcoin::Transaction;
 
 sub _no_class;
@@ -16,20 +16,20 @@ sub new {
     my $arg = $_[0];
     if (ref $arg eq 'Bitcoin::DataStream') {
 	my $this = bless({
-		version        => $arg->Read(Bitcoin::DataStream::INT32),
-		hashPrev       => unpack('H*', reverse $arg->Read(Bitcoin::DataStream::BYTE . 32)),
-		hashMerkleRoot => unpack('H*', reverse $arg->Read(Bitcoin::DataStream::BYTE . 32)),
-		nTime          => $arg->Read(Bitcoin::DataStream::UINT32),
-		nBits          => $arg->Read(Bitcoin::DataStream::UINT32),
-		nNonce         => $arg->Read(Bitcoin::DataStream::UINT32),
+		version        => $arg->Read(INT32),
+		hashPrev       => unpack('H*', reverse $arg->Read(BYTE . 32)),
+		hashMerkleRoot => unpack('H*', reverse $arg->Read(BYTE . 32)),
+		nTime          => $arg->Read(UINT32),
+		nBits          => $arg->Read(UINT32),
+		nNonce         => $arg->Read(UINT32),
 	    }, $class)->check_proof_of_work;
 
 	return $this if $class =~ /::HEADER$/i;
 
 	if ($this->{version} & (1 << 8)) {
 	    my $merkle_tx = new Bitcoin::Transaction $arg;
-	    $merkle_tx->{chainMerkleBranch} = $arg->Read(Bitcoin::DataStream::BYTE . (32*$arg->read_compact_size));
-	    $merkle_tx->{chainIndex} = $arg->Read(Bitcoin::DataStream::INT32);
+	    $merkle_tx->{chainMerkleBranch} = $arg->Read(BYTE . (32*$arg->read_compact_size));
+	    $merkle_tx->{chainIndex} = $arg->Read(INT32);
 	    $merkle_tx->{parentBlock} = ($class.'::HEADER')->new($arg);
 	}
 
@@ -54,10 +54,10 @@ sub new {
 	    die 'no such block' if $cursor->status;
 	    die "block entry was removed" unless defined $v;
 	    my $vds = new Bitcoin::DataStream $v;
-	    $vds->Read(Bitcoin::DataStream::INT32);  # version
-	    $vds->Read(Bitcoin::DataStream::BYTE . 32);  # hashNext
-	    $nFile        = $vds->Read(Bitcoin::DataStream::UINT32);
-	    $nBlockPos    = $vds->Read(Bitcoin::DataStream::UINT32);
+	    $vds->Read(INT32);  # version
+	    $vds->Read(BYTE . 32);  # hashNext
+	    $nFile        = $vds->Read(UINT32);
+	    $nBlockPos    = $vds->Read(UINT32);
 	}
 	elsif ($arg =~ /^\d+$/ or ref $arg eq 'Regexp') {
 	    my @result;
@@ -66,14 +66,14 @@ sub new {
 		do {
 		    my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
 		    last SEARCH if $kds->read_string ne 'blockindex';
-		    my $hash = unpack 'H*', reverse $kds->Read(Bitcoin::DataStream::BYTE . 32);
+		    my $hash = unpack 'H*', reverse $kds->Read(BYTE . 32);
 		    if (ref $arg eq 'Regexp') { push @result, $hash if $hash =~ $arg }
 		    else {
-			$vds->Read(Bitcoin::DataStream::INT32);  # version
-			$vds->Read(Bitcoin::DataStream::BYTE . 32);  # hashNext
-			$nFile        = $vds->Read(Bitcoin::DataStream::UINT32);
-			$nBlockPos    = $vds->Read(Bitcoin::DataStream::UINT32);
-			my $nHeight   = $vds->Read(Bitcoin::DataStream::INT32);
+			$vds->Read(INT32);  # version
+			$vds->Read(BYTE . 32);  # hashNext
+			$nFile        = $vds->Read(UINT32);
+			$nBlockPos    = $vds->Read(UINT32);
+			my $nHeight   = $vds->Read(INT32);
 			last SEARCH if $nHeight == $arg;
 		    }
 		} until $cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
@@ -98,11 +98,11 @@ sub _no_class    { my $_ = shift; die "class method call not implemented" unless
 sub header {
     my $this = shift->_no_class;
     pack
-    Bitcoin::DataStream::INT32  .
+    INT32  .
     'a32a32' .
-    Bitcoin::DataStream::UINT32 .
-    Bitcoin::DataStream::UINT32 .
-    Bitcoin::DataStream::UINT32 ,
+    UINT32 .
+    UINT32 .
+    UINT32 ,
     $this->{version},
     ( map { scalar reverse pack 'H64', $this->{$_} } qw(hashPrev hashMerkleRoot) ),
     map $this->{$_}, qw(nTime nBits nNonce);

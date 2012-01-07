@@ -236,9 +236,9 @@ sub data_length {
     my $this = shift; do {...} unless ref $this;
     my $first_char = $this->first_char;
     $first_char  < 76 ? $first_char :
-    $first_char == 76 ? unpack 's>', substr $this->binary_code, 1, 1 :
-    $first_char == 77 ? unpack 's>', substr $this->binary_code, 1, 2 :
-    $first_char == 78 ? unpack 's>', substr $this->binary_code, 1, 4 :
+    $first_char == 76 ?          ord substr $this->binary_code, 1, 1 :
+    $first_char == 77 ? unpack 'S>', substr $this->binary_code, 1, 2 :
+    $first_char == 78 ? unpack 'L>', substr $this->binary_code, 1, 4 :
     0;
 }
 sub data_offset {
