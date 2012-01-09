@@ -28,6 +28,7 @@ use constant {
 
     DEFAULT_PORT	=>        8333,
 
+    DUMMY_PASSWD        => 'dummy password',
 };
 
 sub hash160 {
@@ -49,6 +50,25 @@ sub hash_hex;
     sub hash_hex { unpack 'H*', reverse hash shift }
 }
 
+# bitcoin C++ class name   <=>  perl package name
+package CPrivKey;		our @ISA = qw(Bitcoin::Key::Private);
+package CSecret;		our @ISA = qw(Bitcoin::Key::Secret);
+package CMasterKey;		our @ISA = qw(Bitcoin::Key::MasterKey);
+
+package CBase58Data;		our @ISA = qw(Bitcoin::Base58::Data);
+
+package CBitcoinAddress;	our @ISA = qw(Bitcoin::Address);
+
+package CWallet;		our @ISA = qw(Bitcoin::Wallet);
+
+package CKeyStore;		our @ISA = qw(Bitcoin::KeyStore);
+package CBasicKeyStore;		our @ISA = qw(Bitcoin::KeyStore::Basic);
+package CCryptoKeyStore;	our @ISA = qw(Bitcoin::KeyStore::Encrypted);
+
+package CBlock;			our @ISA = qw(Bitcoin::Block);
+package CBlockIndex;		our @ISA = qw(Bitcoin::Block::Index);
+
+package CAddress;		our @ISA = qw(Bitcoin::Network::Address);
 
 1;
 

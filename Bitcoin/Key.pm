@@ -1,22 +1,27 @@
 #!/usr/bin/perl
-package Bitcoin::Key::Secret;
-require Bitcoin::Base58;
-@ISA = qw(Bitcoin::Base58::Data);
-
+package Bitcoin::Key;
 use strict;
 use warnings;
-
 use Bitcoin;
 use Bitcoin::Address;
 
+# EC Settings
+use EC::Curves;
 use EC qw(secp256k1);
 
+package EC;
 # group generator
-use EC::Curves;
 use constant G => EC::Curves::secp256k1->{G};
 
-# default password for encryption
-use constant DUMMY_PASSWD => 'dummy password';
+package Bitcoin::Key::Master;
+# TODO
+#
+package Bitcoin::Key::Private;
+# TODO
+
+package Bitcoin::Key::Secret;
+require Bitcoin::Base58;
+our @ISA = qw(Bitcoin::Base58::Data);
 
 # Redefined methods
 sub size { 256 }
@@ -40,12 +45,12 @@ use overload
 '+' => sub {
     my ($a, $b) = @_;
     warn 'operands are not blessed into the same package' unless ref $a eq ref $b;
-    ref($a)->new( ($a->value + $b->value) % G->[2] )
+    ref($a)->new( ($a->value + $b->value) % EC::G->[2] )
 },
 '*' => sub {
     if ($_[2] or ref $_[1] ne 'EC::Point') {
 	use bigint;
-	($_[0]->value * $_[1]->value) % G->[2];
+	($_[0]->value * $_[1]->value) % EC::G->[2];
     }
     else { EC::mult $_[0]->value, $_[1] }
 },
@@ -89,7 +94,7 @@ sub decrypt {
     return $_;
 }
 
-sub public_point { EC::mult shift->_no_class->value, G }
+sub public_point { EC::mult shift->_no_class->value, EC::G }
 sub address { new Bitcoin::Address $_[0]->public_point, $_[1] }
 
 sub _from_PEM {
@@ -110,7 +115,7 @@ sub _from_PEM {
 	if (ref($arg) eq 'Crypt::Rijndael') { $arg }
 	else {
 	    use Crypt::Rijndael;
-	    new Crypt::Rijndael sha256($arg || DUMMY_PASSWD), Crypt::Rijndael::MODE_CBC;
+	    new Crypt::Rijndael sha256($arg || Bitcoin::DUMMY_PASSWD), Crypt::Rijndael::MODE_CBC;
 	}
     }
 
@@ -123,17 +128,16 @@ sub _from_PEM {
 
 }
 
-
 1;
 
 __END__
 =head1 TITLE
 
-Bitcoin::Key::Secret
+Bitcoin::Key, Bitcoin::Key::Secret
 
 =head1 SYNOPSIS
 
-    use Bitcoin::Key::Secret;
+    use Bitcoin::Key;
 
     my $key = new Bitcoin::Key::Secret;
     my $key = new Bitcoin::Key::Secret '5JZDTbbezKW7dZSPECIMENSPECIMENSPECIMENxxeMZnZvev8Dy';

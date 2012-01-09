@@ -1,23 +1,22 @@
 #!/usr/bin/perl -w
+package Bitcoin::KeyStore;
 use strict;
 use warnings;
-
-package Bitcoin::KeyStore;
 use Bitcoin::Address;
-use Bitcoin::PrivateKey;
+use Bitcoin::Key;
 our ($cipher, $passwd);
 
 sub FETCH {
     my $_ = shift;
     my $addr = shift;
-    my $encrypted = bless \$_->SUPER::FETCH($addr), 'Bitcoin::PrivateKey';
+    my $encrypted = bless \$_->SUPER::FETCH($addr), 'Bitcoin::Key::Secret';
     return $encrypted->decrypt($cipher // $passwd);
 }
 
 sub STORE {
     my ($this, $key, $value) = @_;
     my $pubkey = Bitcoin::Address->new($key);
-    my $privkey = Bitcoin::PrivateKey->new($value);
+    my $privkey = Bitcoin::Key::Secret->new($value);
     die "incompatible version numbers" if $privkey->version != 128 + $pubkey->version;
     die "inconsistent entry:  key is not value's Bitcoin address" if $$pubkey ne $privkey->address->toBase58;
     return $this->SUPER::STORE($pubkey->toBase58, $privkey->encrypt($cipher // $passwd));
@@ -27,12 +26,12 @@ sub add {
     my $_ = shift;
     die "class method call not implemented" unless ref;
     my $arg = shift; 
-    if (ref($arg) eq 'Bitcoin::PrivateKey') {
+    if (ref($arg) eq 'Bitcoin::Key::Secret') {
 	my $address = $arg->address->toBase58;
 	$_->SUPER::STORE($address, $arg->encrypt($cipher // $passwd));
 	return $address;
     }
-    else { $_->add(new Bitcoin::PrivateKey $arg) }
+    else { $_->add(new Bitcoin::Key::Secret $arg) }
 }
 
 package Bitcoin::KeyStore::Basic; 		# corresponds to CBasicKeyStore

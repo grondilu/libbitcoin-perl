@@ -1,5 +1,38 @@
 #!/usr/bin/perl -w
 package Bitcoin::Block;
+@ISA = qw(Bitcoin::Block::HEADER);
+
+sub new {
+    my $class = shift->_no_instance;
+    my $arg = $_[0];
+    if (ref $arg eq 'Bitcoin::DataStream') {
+	my $this = new $SUPER::class $arg;
+
+	if ($this->{version} & (1 << 8)) {
+	    my $merkle_tx = new Bitcoin::Transaction $arg;
+	    $merkle_tx->{chainMerkleBranch} = $arg->read_bytes(32*$arg->read_compact_size);
+	    $merkle_tx->{chainIndex} = $arg->Read(INT32);
+	    $merkle_tx->{parentBlock} = ($class.'::HEADER')->new($arg);
+	}
+
+	$this->{transactions} = [ map { new Bitcoin::Transaction $arg } 1 .. $arg->read_compact_size ];
+	return $this;
+    }
+    else { return new $SUPER::class @_ }
+}
+
+sub unbless {
+    my $this = shift;
+    +{
+	map {
+	$_ => $_ eq 'transactions' ?
+	[ map { +{ %$_ } } @{$this->{$_}} ] :
+	$this->{$_}
+	} keys %$this
+    }
+}
+
+package Bitcoin::Block::HEADER;
 use strict;
 use warnings;
 
@@ -15,7 +48,7 @@ sub new {
     my $class = shift->_no_instance;
     my $arg = $_[0];
     if (ref $arg eq 'Bitcoin::DataStream') {
-	my $this = bless({
+	return bless({
 		version        => $arg->Read(INT32),
 		hashPrev       => unpack('H*', reverse $arg->read_bytes(32)),
 		hashMerkleRoot => unpack('H*', reverse $arg->read_bytes(32)),
@@ -23,24 +56,8 @@ sub new {
 		nBits          => $arg->Read(UINT32),
 		nNonce         => $arg->Read(UINT32),
 	    }, $class)->check_proof_of_work;
-
-	return $this if $class =~ /::HEADER$/i;
-
-	if ($this->{version} & (1 << 8)) {
-	    my $merkle_tx = new Bitcoin::Transaction $arg;
-	    $merkle_tx->{chainMerkleBranch} = $arg->read_bytes(32*$arg->read_compact_size);
-	    $merkle_tx->{chainIndex} = $arg->Read(INT32);
-	    $merkle_tx->{parentBlock} = ($class.'::HEADER')->new($arg);
-	}
-
-	$this->{transactions} = [
-	    map { new Bitcoin::Transaction $arg } 1 .. $arg->read_compact_size
-	];
-	return $this;
     }
-    elsif (ref $arg eq 'HASH') {
-	...
-    }
+    elsif (ref $arg eq 'HASH') {...}
     elsif (@_ > 1 and @_ % 2 == 0) { new $class +{ @_ } }
     elsif ($arg =~ /^[a-f\d]+$/ or ref $arg eq 'Regexp') {
 	import Bitcoin::Database 'blkindex';
@@ -108,17 +125,6 @@ sub header {
     map $this->{$_}, qw(nTime nBits nNonce);
 }
 
-sub unbless {
-    my $this = shift;
-    +{
-	map {
-	$_ => $_ eq 'transactions' ?
-	[ map { +{ %$_ } } @{$this->{$_}} ] :
-	$this->{$_}
-	} keys %$this
-    }
-}
-
 sub serialize {
     my $this = shift->_no_class;
     return
@@ -140,8 +146,11 @@ sub check_proof_of_work {
     }
 }
 
-package Bitcoin::Block::HEADER;
-our @ISA = qw(Bitcoin::Block);
+package Bitcoin::Block::Index;
+# TODO
+
+package Bitcoin::Block::Locator;
+# TODO
 
 1;
 
