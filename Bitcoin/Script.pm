@@ -4,7 +4,11 @@ use v5.14;
 use strict;
 use warnings;
 
-use overload '+' => sub { bless [ @{$_[0]}, @{$_[1]} ] };
+use overload
+'<<'	=> sub { bless [ @{$_[0]}, @{$_[1]} ] },
+'&{}'	=> sub { my $this = shift; sub { $_->() for @$this } },
+;
+
 sub new {
     my $class = shift; die 'instance method call not implemented' if ref $class;
     my $arg = shift;
@@ -26,21 +30,27 @@ sub code {
     join '', map $_->code, @$this;
 }
 
+sub unbless { [ map $_->unbless, @{shift()} ] }
+
 package Bitcoin::Script::Atom;
 require Bitcoin::Script::Codes;
-use overload q(@{}) => sub { [ shift ] };
+use overload
+q(@{})	=> sub { [ shift ] },
+q(&{})	=> sub {...},
+;
+
 our @ISA = qw(Bitcoin::Script);
 sub new {
     my $class = shift; die 'instance method call not implemented' if ref $class;
     my $arg   = shift;
     my $first_char_ord = ord substr $arg, 0, 1;
     bless {
-	'op_code' =>
-	{ map { ${$Bitcoin::Script::Codes::{$_}}->[0] => $_ } grep /\AOP_/, keys %Bitcoin::Script::Codes:: }->{$first_char_ord} // 'N/A',
+	'op_code' => $Bitcoin::Script::Codes::Inverse_code{$first_char_ord} // 'N/A',
     }, $class;
 }
 sub code { my $_ = shift; $_->{code} // sprintf '%2x', ${'Bitcoin::Script::Codes::'.$_->{op_code}}->[0] }
 sub _length { my $_ = shift; length($_->code) / 2 }
+sub unbless { +{ %{shift()} } }
 
 package Bitcoin::Script::OP;
 our @ISA = qw(Bitcoin::Script::Atom);
@@ -55,6 +65,10 @@ sub new {
 
 package Bitcoin::Script::PushData;
 our @ISA = qw(Bitcoin::Script::Atom);
+use overload
+q(&{})	=> sub { my $this = shift; sub { use Bitcoin::Script::Stack qw(Push); Push $this->data } },
+;
+
 sub new {
     my $class = shift; die 'instance method call not implemented' if ref $class;
     my $arg = shift;
@@ -72,23 +86,29 @@ sub new {
     for (substr $arg, $offset, $length) {
 	if (/\A[ [:ascii:] ]{4,}\Z/x ) {
 	    $this->{text} = $_;
-	    return bless $this, ref($this).'::ASCII';
+	    return bless $this, $class.'::ASCII';
 	}
-	elsif (/\A\x{04}.{64}+\Z/m)    {
+	elsif (/\A\x{04}.{64}+\Z/ms)    {
 	    use Bitcoin::Address;
 	    use bigint;
 	    $this->{address} = ''. new Bitcoin::Address Bitcoin::hash160 $_;
-	    return bless $this, ref($this).'::PublicKey';
+	    return bless $this, $class.'::PublicKey';
 	}
-	else { return $this }
+	else {
+	    $this->{offset} = $offset;
+	    return $this;
+	}
     }
 }
+sub data { my $this = shift; substr pack('H*', $this->{code}), $this->{offset} }
 
 package Bitcoin::Script::PushData::ASCII;
 our @ISA = qw(Bitcoin::Script::PushData);
+sub data { shift->{text} }
 
 package Bitcoin::Script::PushData::PublicKey;
 our @ISA = qw(Bitcoin::Script::PushData);
+sub data { substr pack('H*', shift->{code}), 1 }
 
 1;
 

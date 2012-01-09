@@ -9,13 +9,12 @@ use constant BASE58	=> qw{
     A B C D E F G H   J K L M N   P Q R S T U V W X Y Z
     a b c d e f g h i j k   m n o p q r s t u v w x y z
 };
+use constant TEST	=> 0;
 
 use constant {
     BTC                 =>  "\x{0243}",  # Ƀ
-    GENESIS             => '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f',
-    GENESIS_TEST    	=> '00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008',
+    GENESIS             => !TEST ?  '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f' : '00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008',
     TIMES20090103       => 'The Times 03/Jan/2009 Chancellor on brink of second bailout for banks',
-    AUTHOR		=> 'Satoshi Nakamoto',
 
     DATA_DIR		=> $ENV{HOME}.'/.bitcoin',
 
@@ -24,12 +23,15 @@ use constant {
     COIN		=> 100_000_000,
     CENT		=>   1_000_000,
     MAX_MONEY		=>       21e14,
-    TEST		=>           0,
 
     DEFAULT_PORT	=>        8333,
 
+    IRC			=> [ 'irc.lfnet.org:6667', '#bitcoin'. (TEST ? 'TEST' : '') ],
+
     DUMMY_PASSWD        => 'dummy password',
 };
+
+use constant CREDITS	=>  'Satoshi Nakamoto', 'Gavin Andersen', 'bitcoin developpers';
 
 sub hash160 {
     return scalar qx/
@@ -40,8 +42,6 @@ sub hash160 {
 }
 sub hash160_hex { return unpack 'H*', hash160 @_ }
 
-sub genesis() { TEST ? GENESIS_TEST : GENESIS };
-
 sub hash;
 sub hash_hex;
 {
@@ -49,26 +49,6 @@ sub hash_hex;
     sub hash     { sha256 sha256 shift }
     sub hash_hex { unpack 'H*', reverse hash shift }
 }
-
-# bitcoin C++ class name   <=>  perl package name
-package CPrivKey;		our @ISA = qw(Bitcoin::Key::Private);
-package CSecret;		our @ISA = qw(Bitcoin::Key::Secret);
-package CMasterKey;		our @ISA = qw(Bitcoin::Key::MasterKey);
-
-package CBase58Data;		our @ISA = qw(Bitcoin::Base58::Data);
-
-package CBitcoinAddress;	our @ISA = qw(Bitcoin::Address);
-
-package CWallet;		our @ISA = qw(Bitcoin::Wallet);
-
-package CKeyStore;		our @ISA = qw(Bitcoin::KeyStore);
-package CBasicKeyStore;		our @ISA = qw(Bitcoin::KeyStore::Basic);
-package CCryptoKeyStore;	our @ISA = qw(Bitcoin::KeyStore::Encrypted);
-
-package CBlock;			our @ISA = qw(Bitcoin::Block);
-package CBlockIndex;		our @ISA = qw(Bitcoin::Block::Index);
-
-package CAddress;		our @ISA = qw(Bitcoin::Network::Address);
 
 1;
 

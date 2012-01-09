@@ -26,6 +26,7 @@ use constant {
 #
 sub new;
 sub clear;
+sub depth;
 sub Read;
 sub Write;
 sub map_file;
@@ -54,6 +55,7 @@ sub new {
 }
 
 sub clear { my $_ = shift->_no_class; @$_[0,1] = (0, '') }
+sub depth { length shift->[1] }
 
 sub map_file {
     use File::Map;
@@ -68,10 +70,10 @@ sub close_file { undef shift->_no_class->[1] }
 
 sub Read {
     my $_ = shift->_no_class;
-    die "data stream is empty" if $_->[1] eq '';
+    die "data stream is empty" unless my $depth = $_->depth;
     my $what_to_read = shift;
     my $length = $what_to_read eq STRING ? $_->read_compact_size : calc_size $what_to_read;
-    die "index out of buffer $length" if $length > length($_->[1]) - $_->[0];
+    die "index out of buffer" if $length > $depth - $_->[0];
     my $result = unpack $what_to_read, substr $_->[1], $_->[0], $length;
     $_->[0] += $length;
     return $result;
@@ -105,7 +107,6 @@ sub read_bytes {
 sub read_compact_size {
     my $_ = shift->_no_class;
     my $size = ord substr $_->[1], $_->[0]++, 1;
-    ;
     if    ($size == 253) { $size = $_->Read(UINT16) }
     elsif ($size == 254) { $size = $_->Read(UINT32) }
     elsif ($size == 255) { $size = $_->Read(UINT64) }

@@ -6,7 +6,6 @@ use Bitcoin;
 use Bitcoin::Address;
 
 # EC Settings
-use EC::Curves;
 use EC qw(secp256k1);
 
 package EC;

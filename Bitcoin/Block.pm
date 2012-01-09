@@ -30,7 +30,7 @@ sub unbless {
     +{
 	map {
 	$_ => $_ eq 'transactions' ?
-	[ map { +{ %$_ } } @{$this->{$_}} ] :
+	[ map { $_->unbless } @{$this->{$_}} ] :
 	$this->{$_}
 	} keys %$this
     }

@@ -52,6 +52,7 @@ use constant {
 
 };
 
+our %Inverse_code = ( map { ${$Bitcoin::Script::Codes::{$_}}->[0] => $_ } grep /\AOP_/, %Bitcoin::Script::Codes:: );
 
 1;
 

@@ -28,8 +28,8 @@ package Bitcoin::Base58::Data;
 use Digest::SHA qw(sha256);
 
 # public methods
-sub size();		# virtual constant function
-sub default_version();	# virtual constant function
+sub size();		# virtual constant function  (should be automatically inlined)
+sub default_version();	# virtual constant function  (should be automatically inlined)
 sub version;
 sub data;
 sub value;

@@ -41,17 +41,18 @@ use constant {
     OP_EQUAL		=> [ 135, sub { Push +(Pop eq Pop) ? 1 : 0 } ],
     OP_EQUALVERIFY	=> [ 136, sub { if (Pop eq Pop) { Push 0; die 'OP_EQUALVERIFY' } } ],
 
-    OP_RIPEMD160	=> [ 166, sub { Bitcoin::Script::Stack::Push qx/perl -e 'print pack "b*", '@{[unpack 'b*', Pop]}' | openssl dgst -rmd160 -binary/ } ],
-    OP_SHA1     	=> [ 167, sub { use Digest::SHA qw(sha1);   Bitcoin::Script::Stack::Push sha1 Pop } ],
-    OP_SHA256   	=> [ 168, sub { use Digest::SHA qw(sha256); Bitcoin::Script::Stack::Push sha256 Pop } ],
-    OP_HASH160  	=> [ 169, sub { use Bitcoin; Bitcoin::Script::Stack::Push Bitcoin::hash160 Pop } ],
-    OP_HASH256  	=> [ 170, sub { use Bitcoin; Bitcoin::Script::Stack::Push Bitcoin::hash    Pop } ],
+    OP_RIPEMD160	=> [ 166, sub { Push qx/perl -e 'print pack "b*", '@{[unpack 'b*', Pop]}' | openssl dgst -rmd160 -binary/ } ],
+    OP_SHA1     	=> [ 167, sub { use Digest::SHA qw(sha1);   Push sha1 Pop } ],
+    OP_SHA256   	=> [ 168, sub { use Digest::SHA qw(sha256); Push sha256 Pop } ],
+    OP_HASH160  	=> [ 169, sub { use Bitcoin; Push Bitcoin::hash160 Pop } ],
+    OP_HASH256  	=> [ 170, sub { use Bitcoin; Push Bitcoin::hash    Pop } ],
 
     OP_CODESEPARATOR    => [ 171, sub {...} ],
     OP_CHECKSIG		=> [ 172, sub {...} ],
 
 };
 
+our %Inverse_code = ( map { ${$Bitcoin::Script::Codes::{$_}}->[0] => $_ } grep /\AOP_/, \%Bitcoin::Script::Codes:: );
 
 1;
 

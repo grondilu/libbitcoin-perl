@@ -1,5 +1,26 @@
 #!/usr/bin/perl
-# elliptic curve algebra in Perl
+# elliptic curve cryptography in Perl
+
+
+package EC::Curves;
+use strict;
+use warnings;
+use bigint;
+
+# secp256k1, http://www.oid-info.com/get/1.3.132.0.10
+use constant secp256k1 => {
+    p => hex('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F'),
+    b => hex('0x0000000000000000000000000000000000000000000000000000000000000007'),
+    a => hex('0x0000000000000000000000000000000000000000000000000000000000000000'),
+    G => bless [
+	hex('0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798'),
+	hex('0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'),
+	hex('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141'),
+    ], 'Point'
+};
+
+no bigint;
+
 package EC;
 use strict;
 use warnings;
@@ -23,7 +44,6 @@ sub import {
 	($a, $b, $p) = map $_[0]->{$_}, qw( a b p );
     }
     elsif (@_ == 1 and not ref $_[0]) {
-	use EC::Curves;
 	my $curve = shift;
 	die 'unknown curve' unless exists $EC::Curves::{$curve};
 	($a, $b, $p) = map ${$EC::Curves::{$curve}}->{$_}, qw( a b p );
@@ -103,6 +123,61 @@ use overload
     return EC::mult $_[0], $_[1] if ref $_[1] eq 'EC::Point';
     $_[0]->bmul($_[1]);
 };
+
+package EC::DSA::PublicKey;
+use strict;
+use warnings;
+
+sub new {
+    die "constructor's instance method call not implemented" if ref(my $class = shift);
+    my ($generator, $point) = @_;
+    die "generator should have an order" unless defined(my $n = $$generator[2]);
+    die "bad order for generator" if defined EC::mult $n, $generator;
+    bless [ map EC::check($_), $generator, $point ], $class;
+}
+sub verifies {
+    use bigint;
+    my $this = shift;
+    die "class method call not implemented" unless ref $this;
+    my $n = $this->[0][2];
+    my $h = shift;
+    my ($r, $s) = @{shift()};
+    die "out of range" if $r < 1 or $r > $n - 1 or $s < 1 or $s > $n -1;
+    my $c = NumberTheory::inverse_mod($s, $n);
+    my @u = map { $_*$c % $n } $h, $r;
+    my $xy = EC::add map EC::mult( $u[$_], $this->[$_] ), 0, 1;
+    die "wrong signature" unless $$xy[0] % $n == $r;
+}
+
+package EC::DSA::PrivateKey;
+use strict;
+use warnings;
+use integer;
+
+sub new {
+    die "constructor's instance method call not implemented" if ref(my $class = shift);
+    my ($public_key, $secret_multiplier) = @_;
+    die "wrong public key format" if ref($public_key) ne 'EC::DSA::PublicKey';
+    bless [ $public_key, $secret_multiplier ], $class;
+}
+sub sign {
+    use bigint;
+    my $_ = shift;
+    die "class method call not implemented" unless ref;
+    my $generator = $_->[0][0];
+    my $n = $generator->[2] // die 'unknown generator order';
+    my ($h, $random_k) = @_;
+    my $k = $random_k % $n;
+    my $p = EC::mult $k, $generator;
+    my $r = $$p[0];
+    die "amazingly unlucky random number r" if $r == 0;
+    my $s = (
+	NumberTheory::inverse_mod( $k, $n ) *
+	($h + ($$_[1] * $r) % $n)
+    ) % $n;
+    die "amazingly unlucky random number s" if $s == 0;
+    return [ $r, $s ];
+}
 
 1;
 
