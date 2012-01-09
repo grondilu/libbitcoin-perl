@@ -1,24 +1,28 @@
 #!/usr/bin/perl -w
 package Bitcoin::Block;
 @ISA = qw(Bitcoin::Block::HEADER);
+use strict;
+use warnings;
 
 sub new {
     my $class = shift->_no_instance;
     my $arg = $_[0];
     if (ref $arg eq 'Bitcoin::DataStream') {
-	my $this = new $SUPER::class $arg;
+	my $this = SUPER::new $class $arg;
 
 	if ($this->{version} & (1 << 8)) {
+	    use Bitcoin::DataStream qw(INT32);
 	    my $merkle_tx = new Bitcoin::Transaction $arg;
 	    $merkle_tx->{chainMerkleBranch} = $arg->read_bytes(32*$arg->read_compact_size);
 	    $merkle_tx->{chainIndex} = $arg->Read(INT32);
-	    $merkle_tx->{parentBlock} = ($class.'::HEADER')->new($arg);
+	    $merkle_tx->{parentBlock} = SUPER::new $class $arg;
+	    $this->{merkleTx} = $merkle_tx;
 	}
 
 	$this->{transactions} = [ map { new Bitcoin::Transaction $arg } 1 .. $arg->read_compact_size ];
 	return $this;
     }
-    else { return new $SUPER::class @_ }
+    else { return SUPER::new $class @_ }
 }
 
 sub unbless {
@@ -32,9 +36,14 @@ sub unbless {
     }
 }
 
+sub serialize {
+    my $this = shift->_no_class;
+    $this->SUPER::header .
+    ($this->{version} & (1 << 8) ? do {...} : '') .
+    join '', map $_->serialize, @{$_->{transactions}};
+}
+
 package Bitcoin::Block::HEADER;
-use strict;
-use warnings;
 
 use Bitcoin;
 use Bitcoin::Database;
@@ -125,14 +134,6 @@ sub header {
     map $this->{$_}, qw(nTime nBits nNonce);
 }
 
-sub serialize {
-    my $this = shift->_no_class;
-    return
-    $this->header .
-    ($this->{version} & (1 << 8) ? do {...} : '') .
-    join '', map $_->serialize, @{$_->{transactions}};
-}
-
 sub check_proof_of_work {
     my $_ = shift;
     if (ref) { ref->check_proof_of_work($_->header, $_->{nBits}); return $_ }
@@ -171,7 +172,7 @@ Bitcoin::Block
     my $block = new Bitcoin::Block -prevHash => '0x.....', -MerkleRoot => '.....', ...  ;
     my $block = new Bitcoin::Block { prevHash => '0x.....', MerkleRoot => '.....', ... } ;
 
-    print Bitcoin::hash_hex $block->header;
+    print Bitcoin::hash_hex $block->serialize;
 
     use Data::Dumper;
     print +Dumper $block;
