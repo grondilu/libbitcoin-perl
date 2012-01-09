@@ -71,7 +71,7 @@ sub Read {
     die "data stream is empty" if $_->[1] eq '';
     my $what_to_read = shift;
     my $length = $what_to_read eq STRING ? $_->read_compact_size : calc_size $what_to_read;
-    die "index out of buffer" if $length > length($_->[1]) - $_->[0];
+    die "index out of buffer $length" if $length > length($_->[1]) - $_->[0];
     my $result = unpack $what_to_read, substr $_->[1], $_->[0], $length;
     $_->[0] += $length;
     return $result;
@@ -105,7 +105,8 @@ sub read_bytes {
 sub read_compact_size {
     my $_ = shift->_no_class;
     my $size = ord substr $_->[1], $_->[0]++, 1;
-    if    ($size == 253) { $size = $_->Read(CHAR) }
+    ;
+    if    ($size == 253) { $size = $_->Read(UINT16) }
     elsif ($size == 254) { $size = $_->Read(UINT32) }
     elsif ($size == 255) { $size = $_->Read(UINT64) }
     return $size;
@@ -116,7 +117,7 @@ sub write_compact_size {
     my $size = shift;
     if    ($size < 0)   { die "negative size" }
     elsif ($size < 253) { $_->[1] .= chr($size); }
-    elsif ($size < 254) { $_->[1] .= "\xfd" . pack CHAR, shift }
+    elsif ($size < 254) { $_->[1] .= "\xfd" . pack UINT16, shift }
     elsif ($size < 255) { $_->[1] .= "\xfe" . pack UINT32, shift }
     else                { $_->[1] .= "\xff" . pack UINT64, shift }
 }
