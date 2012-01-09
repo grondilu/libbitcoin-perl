@@ -3,7 +3,7 @@ use Test;
 
 BEGIN { plan tests => 40 }
 
-use Bitcoin::PrivateKey;
+use Bitcoin::Key;
 use Bitcoin::Address;
 
 for (<DATA>) {
@@ -11,7 +11,7 @@ for (<DATA>) {
     chomp;
     my ($i, $addr, $key) = split ',';
 
-    $key = new Bitcoin::PrivateKey $key;
+    $key = new Bitcoin::Key::Secret $key;
     ok( $key->address, $addr, "failed to convert WIF to bitcoin Address" );
 
     my $before = $key->value;

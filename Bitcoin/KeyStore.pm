@@ -1,11 +1,8 @@
 #!/usr/bin/perl -w
-package Bitcoin::Wallet;
-require DB_File;
-@ISA = qw(DB_File);
-
 use strict;
 use warnings;
 
+package Bitcoin::KeyStore;
 use Bitcoin::Address;
 use Bitcoin::PrivateKey;
 our ($cipher, $passwd);
@@ -37,48 +34,28 @@ sub add {
     }
     else { $_->add(new Bitcoin::PrivateKey $arg) }
 }
+
+package Bitcoin::KeyStore::Basic; 		# corresponds to CBasicKeyStore
+our @ISA = qw(Bitcoin::KeyStore);
+
+package Bitcoin::KeyStore::Encrypted;		# corresponds to CCryptoKeyStore
+our @ISA = qw(Bitcoin::KeyStore::Basic);
+
 1;
 
 __END__
 
 =head1 TITLE
 
-Bitcoin::Wallet
+Bitcoin::KeyStore
 
 =head1 SYNOPSIS
 
-    use Bitcoin::Wallet;
-
-    $Bitcoin::Wallet::passwd = 'some password';
-
-    tie my %wallet, 'Bitcoin::Wallet', '/path/to/my/wallet';
-    END { untie %wallet }
-
-    $wallet{foo} = 'bar';  # dies immediately as none of this is bitcoin related
-
-    use Bitcoin::PrivateKey;
-    my $key = new Bitcoin::PrivateKey;
-    $wallet{$key->address} = $$key;
-    $wallet{1StupidFakeAddress31415z} = $$key;   # should die as the address is not valid;
-
+    use Bitcoin::KeyStore;
 
 =head1 DESCRIPTION
 
-This class provides tie mechanism for a bitcoin wallet.
-
-It has a simple publickey => privatekey structure, but it provides encryption
-and prevents user from entering anything but valid keys in the database.
-
-This class DOES NOT implement a bitcoin wallet such as the one that is used in
-the bitcoin vanilla software.
-
-Other data such as transaction history, blocks or contacts should
-be stored somewhere else.
-
-=head1 TODO
-
-The class can only store instances of Bitcoin::PrivateKey.  I would be better if it was
-more generic and could store any child class.
+Perl implementation of bitcoin's CKeyStore virtual class.
 
 =head1 AUTHOR
 

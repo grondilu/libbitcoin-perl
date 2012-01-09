@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Bitcoin::PrivateKey;
+package Bitcoin::Key::Secret;
 require Bitcoin::Base58;
 @ISA = qw(Bitcoin::Base58::Data);
 
@@ -20,7 +20,7 @@ use constant DUMMY_PASSWD => 'dummy password';
 
 # Redefined methods
 sub size { 256 }
-sub default_version { Bitcoin::TEST ? 128 : 129 }
+sub default_version { Bitcoin::TEST ? 129 : 128 }
 
 # aliases
 no warnings 'once';
@@ -60,14 +60,15 @@ sub new {
     my $class = shift->_no_instance;
     my $arg = shift;
     my $version = shift;
-    if (ref $arg eq 'Crypt::Rijndael')       { (new $class $class->randInt)->encrypt($arg) }
+    if    (not defined $arg)                 { new $class $class->randInt }
+    elsif (ref $arg eq 'Crypt::Rijndael')    { (new $class)->encrypt($arg) }
     elsif ($arg =~ m/-+BEGIN [^-]* KEY---/)  { new $class $class->_from_PEM($arg), $version }
     else                                     { SUPER::new $class $arg, $version }
 }
 
 sub value {
     my $value = shift->SUPER::value;
-    die "key is encrypted" unless ref $value eq 'Math::BigInt';
+    die "secret key is encrypted" unless ref $value eq 'Math::BigInt';
     return $value;
 }
 
@@ -128,16 +129,16 @@ sub _from_PEM {
 __END__
 =head1 TITLE
 
-Bitcoin::PrivateKey
+Bitcoin::Key::Secret
 
 =head1 SYNOPSIS
 
-    use Bitcoin::PrivateKey;
+    use Bitcoin::Key::Secret;
 
-    my $key = new Bitcoin::PrivateKey;
-    my $key = new Bitcoin::PrivateKey '5JZDTbbezKW7dZSPECIMENSPECIMENSPECIMENxxeMZnZvev8Dy';
-    my $key = new Bitcoin::PrivateKey 123456789;
-    my $key = new Bitcoin::PrivateKey <<'...' ;
+    my $key = new Bitcoin::Key::Secret;
+    my $key = new Bitcoin::Key::Secret '5JZDTbbezKW7dZSPECIMENSPECIMENSPECIMENxxeMZnZvev8Dy';
+    my $key = new Bitcoin::Key::Secret 123456789;
+    my $key = new Bitcoin::Key::Secret <<'...' ;
     -----BEGIN EC PARAMETERS-----
     BgUrgQQACg==
     -----END EC PARAMETERS-----
@@ -178,7 +179,7 @@ The key can be generated in several ways.
 The most basic use of the class consists in generating a random key by calling
 the constructor with no argument:
 
-    my $key = new Bitcoin::PrivateKey;
+    my $key = new Bitcoin::Key::Secret;
 
 In this case, the constructor creates, as randomly as possible, a 32-bytes
 integer and uses it as secret exponent of the secp256k1 elliptic curve.
@@ -188,9 +189,9 @@ integer and uses it as secret exponent of the secp256k1 elliptic curve.
 This duplicates a key from a WIF or PEM representation.  It can be usefull for
 recovery, import, or checksum validation. 
 
-    my $key = new Bitcoin::PrivateKey '5JZDTbbezKW7dZcfo5auX8koqGzcJV5kA7MiehxxeMZnZvev8Dy';
+    my $key = new Bitcoin::Key::Secret '5JZDTbbezKW7dZcfo5auX8koqGzcJV5kA7MiehxxeMZnZvev8Dy';
 or
-    my $key = new Bitcoin::PrivateKey <<'...' ;
+    my $key = new Bitcoin::Key::Secret <<'...' ;
     -----BEGIN EC PARAMETERS-----
     BgUrgQQACg==
     -----END EC PARAMETERS-----
@@ -209,15 +210,15 @@ It consists of giving the constructor an instance of Math::BigInt.  Such an
 integer will be directly used as the secret exponent.
 
     use bigint;
-    my $key = new Bitcoin::PrivateKey  256**16 + 1;
+    my $key = new Bitcoin::Key::Secret  256**16 + 1;
 
 =head3 Salting a previous key
 
 You can create a key by salting a previous one with any arbitrary string.  To
 do so, the hash dereferenciation operator has been overloaded.Each fetched
-value is a blessed reference to a new Bitcoin::PrivateKey object.
+value is a blessed reference to a new Bitcoin::Key::Secret object.
 
-    my $main_key = new Bitcoin::PrivateKey;
+    my $main_key = new Bitcoin::Key::Secret;
     my %wallet = %$main_key;
     my $socks_key = $wallet{"savings account to buy alpaca socks"};
     print $socks_key->address;
@@ -237,11 +238,11 @@ Argument can be either a password or a previously built C<Crypt::Rijndael> ciphe
 
     use Crypt::Rijndael;
     my $cipher = new Crypt::Rijndael "some password";
-    my $key = Bitcoin::PrivateKey->new->encrypt($cipher);
+    my $key = Bitcoin::Key::Secret->new->encrypt($cipher);
 
 It is also possible to provide the cipher as an argument to the constuctor:
 
-    my $key = new Bitcoin::PrivateKey $cipher;
+    my $key = new Bitcoin::Key::Secret $cipher;
 
 Once a key is encrypted, most method calls will die with a "key is encrypted"
 message.  Basically only the C<decrypt> method can be executed.

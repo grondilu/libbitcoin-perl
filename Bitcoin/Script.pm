@@ -36,7 +36,7 @@ sub new {
     my $first_char_ord = ord substr $arg, 0, 1;
     bless {
 	'op_code' =>
-	{ map { ${'Bitcoin::Script::Codes::'.$_}->[0] => $_ } grep /\aOP_/, keys %Bitcoin::Script::Codes:: }->{$first_char_ord} // 'N/A',
+	{ map { ${$Bitcoin::Script::Codes::{$_}}->[0] => $_ } grep /\AOP_/, keys %Bitcoin::Script::Codes:: }->{$first_char_ord} // 'N/A',
     }, $class;
 }
 sub code { my $_ = shift; $_->{code} // sprintf '%2x', ${'Bitcoin::Script::Codes::'.$_->{op_code}}->[0] }
