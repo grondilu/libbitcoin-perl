@@ -38,7 +38,6 @@ sub write_string;
 sub read_bytes;
 
 # internal functions
-sub Length;
 sub calc_size;
 sub _no_class;
 sub _no_instance;
@@ -48,34 +47,46 @@ sub _no_instance;
 sub new {
     my $class = shift->_no_instance;
     my $arg = shift // '';
-    bless [
-	0,		# reading cursor,
-	$arg      	# data string
-    ], $class;
+    bless {
+	cursor => 0,		# reading cursor,
+	input  => $arg      	# data string
+    }, $class;
 }
 
+# ro accessors
+sub cursor { shift->_no_class->{cursor} }
+sub input  { shift->_no_class->{input} }
+
+# overloading
+use overload
+'""' => sub { unpack 'H*', shift->input },
+'.' => sub {...},
+;
+
+# methods
+#
 sub clear { my $_ = shift->_no_class; @$_[0,1] = (0, '') }
-sub depth { length shift->[1] }
+sub depth { length shift->{input} }
 
 sub map_file {
     use File::Map;
     my $_ = shift->_no_class;
     my ($file, $start) = @_;
-    $_->[0] = $start;
-    File::Map::map_file $_->[1], $file;
+    $_->{cursor} = $start;
+    File::Map::map_file $_->{input}, $file;
     return $_;
 }
-sub seek_file { my $_ = shift->_no_class; $_->[0] = shift }
-sub close_file { undef shift->_no_class->[1] }
+sub seek_file  { my $_ = shift->_no_class; $_->{cursor} = shift }
+sub close_file { undef shift->_no_class->{input} }
 
 sub Read {
     my $_ = shift->_no_class;
     die "data stream is empty" unless my $depth = $_->depth;
     my $what_to_read = shift;
-    my $length = $what_to_read eq STRING ? $_->read_compact_size : calc_size $what_to_read;
-    die "index out of buffer" if $length > $depth - $_->[0];
-    my $result = unpack $what_to_read, substr $_->[1], $_->[0], $length;
-    $_->[0] += $length;
+    my $length = $_->calc_size($what_to_read);
+    die "index out of buffer" if $length > $depth - $_->{cursor};
+    my $result = unpack $what_to_read, substr $_->{input}, $_->{cursor}, $length;
+    $_->{cursor} += $length;
     return $result;
 }
 
@@ -84,29 +95,29 @@ sub Write {
     my $what_to_write = shift;
     die 'argument expected' unless defined $what_to_write;
     my $arg = shift;
-    $_->write_compact_size(Length $arg) if $what_to_write eq STRING;
-    $_->[1] .= defined $arg ? pack $what_to_write, $arg : $what_to_write;
+    if ($what_to_write eq STRING) { $_->write_string($arg) }
+    else { $_->{input} .= defined $arg ? pack $what_to_write, $arg : $what_to_write }
 }
 
 sub write_string {
     my $_ = shift->_no_class;
     my $string = shift;
-    $_->write_compact_size(Length $string);
-    $_->[1] .= $string;
+    $_->write_compact_size(length $string);
+    $_->{input} .= $string;
 }
 
 sub read_bytes {
     my $_ = shift->_no_class;
     my $length = shift;
-    die "buffer overflow" if $length > length($_->[1]) - $_->[0];
-    my $result = substr $_->[1], $_->[0], $length;
-    $_->[0] += $length;
+    die "buffer overflow" if $length > length($_->{input}) - $_->{cursor};
+    my $result = substr $_->{input}, $_->{cursor}, $length;
+    $_->{cursor} += $length;
     return $result;
 }
 
 sub read_compact_size {
     my $_ = shift->_no_class;
-    my $size = ord substr $_->[1], $_->[0]++, 1;
+    my $size = ord substr $_->{input}, $_->{cursor}++, 1;
     if    ($size == 253) { $size = $_->Read(UINT16) }
     elsif ($size == 254) { $size = $_->Read(UINT32) }
     elsif ($size == 255) { $size = $_->Read(UINT64) }
@@ -117,23 +128,23 @@ sub write_compact_size {
     my $_ = shift->_no_class;
     my $size = shift;
     if    ($size < 0)   { die "negative size" }
-    elsif ($size < 253) { $_->[1] .= chr($size); }
-    elsif ($size < 254) { $_->[1] .= "\xfd" . pack UINT16, shift }
-    elsif ($size < 255) { $_->[1] .= "\xfe" . pack UINT32, shift }
-    else                { $_->[1] .= "\xff" . pack UINT64, shift }
+    elsif ($size < 253) { $_->{input} .= chr($size); }
+    elsif ($size < 254) { $_->{input} .= "\xfd" . pack UINT16, shift }
+    elsif ($size < 255) { $_->{input} .= "\xfe" . pack UINT32, shift }
+    else                { $_->{input} .= "\xff" . pack UINT64, shift }
 }
 
-sub Length { length unpack 'a*', shift }
 sub calc_size {
-    my $_ = shift;
-    /c$/i ? 1 :
-    /a$/i ? 1 :
-    /s/i ? 2 :
-    /l/i ? 4 :
-    /q/i ? 8 :
-    /a(\d+)/i ? $1 :
-    die "unknown format"
-    ;
+    my $this = shift;
+    given( shift ) {
+	when( [ CHAR, BYTE ] )      { return 1 }
+	when( [ INT16, UINT16 ] )   { return 2 }
+	when( [ INT32, UINT32 ] )   { return 4 }
+	when( [ INT64, UINT64 ] )   { return 8 }
+	when( /@{[BYTE]}(\d+)\Z/i ) { return $1 }
+	when( STRING )              { return $this->read_compact_size }
+	default                     { die 'unknown format' }
+    }
 }
 
 sub _no_class    { my $_ = shift; die "class method not implemented"    unless ref; return $_ }
@@ -150,19 +161,19 @@ sub _read_num {
     my $_ = shift->_no_class;
     my $format = shift;
     my $length = calc_size $format;
-    my $result = unpack $format, substr $_->[1], $_->[0], $length;
-    $_->[0] += $length;
+    my $result = unpack $format, substr $_->{input}, $_->{cursor}, $length;
+    $_->{cursor} += $length;
     return $result;
 }
 
 sub _write_num {
     my $_ = shift->_no_class;
-    $_->[1] .= pack @_[0,1];
+    $_->{input} .= pack @_[0,1];
 }
 
 sub read_string {
     my $_ = shift->_no_class;
-    die "data stream is empty" if $_->[1] eq '';
+    die "data stream is empty" if $_->{input} eq '';
     my $length = $_->read_compact_size;
     $_->read_bytes($length);
 }
@@ -175,7 +186,7 @@ sub read_uint32   { return shift->_read_num('L') }
 sub read_int64    { return shift->_read_num('q') }
 sub read_uint64   { return shift->_read_num('Q') }
 
-sub write_boolean { my $_ = shift; return $_->[1] .= chr(shift() ? 1 : 0 ) }
+sub write_boolean { my $_ = shift; return $_->{input} .= chr(shift() ? 1 : 0 ) }
 sub write_int16   { my $_ = shift; return $_->_write_num('s', shift) }
 sub write_uint16  { my $_ = shift; return $_->_write_num('S', shift) }
 sub write_int32   { my $_ = shift; return $_->_write_num('l', shift) }

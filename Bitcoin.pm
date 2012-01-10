@@ -4,16 +4,16 @@ package Bitcoin;
 @EXPORT_OK = qw(BASE58 BTC);
 use v5.14;
 
+use constant TEST	=> 0;
 use constant BASE58	=> qw{
       1 2 3 4 5 6 7 8 9
     A B C D E F G H   J K L M N   P Q R S T U V W X Y Z
     a b c d e f g h i j k   m n o p q r s t u v w x y z
 };
-use constant TEST	=> 0;
 
 use constant {
     BTC                 =>  "\x{0243}",  # Ƀ
-    GENESIS             => !TEST ?  '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f' : '00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008',
+    GENESIS             => !TEST ? '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f' : '00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008',
     TIMES20090103       => 'The Times 03/Jan/2009 Chancellor on brink of second bailout for banks',
 
     DATA_DIR		=> $ENV{HOME}.'/.bitcoin',
@@ -26,12 +26,12 @@ use constant {
 
     DEFAULT_PORT	=>        8333,
 
-    IRC			=> [ 'irc.lfnet.org:6667', '#bitcoin'. (TEST ? 'TEST' : '') ],
 
     DUMMY_PASSWD        => 'dummy password',
 };
 
-use constant CREDITS	=>  'Satoshi Nakamoto', 'Gavin Andersen', 'bitcoin developpers';
+use constant CREDITS	=> 'Satoshi Nakamoto', 'Gavin Andersen', 'bitcoin developpers';
+use constant IRC	=> 'irc.lfnet.org', '6667', '#bitcoin'. (TEST ? 'TEST' : '');
 
 sub hash160 {
     return scalar qx/

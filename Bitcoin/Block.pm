@@ -8,18 +8,22 @@ sub new {
     my $class = shift->_no_instance;
     my $arg = $_[0];
     if (ref $arg eq 'Bitcoin::DataStream') {
+	use Bitcoin;
 	my $this = SUPER::new $class $arg;
 
-	if ($this->{version} & (1 << 8)) {
-	    use Bitcoin::DataStream qw(INT32);
+	if (!Bitcoin::TEST and $this->{version} & (1 << 8)) {
+	    use Bitcoin::DataStream qw(INT32 BYTE);
 	    my $merkle_tx = new Bitcoin::Transaction $arg;
-	    $merkle_tx->{chainMerkleBranch} = $arg->read_bytes(32*$arg->read_compact_size);
+	    $merkle_tx->{chainMerkleBranch} = $arg->Read(BYTE . 32*$arg->read_compact_size);
 	    $merkle_tx->{chainIndex} = $arg->Read(INT32);
 	    $merkle_tx->{parentBlock} = SUPER::new $class $arg;
 	    $this->{merkleTx} = $merkle_tx;
 	}
 
 	$this->{transactions} = [ map { new Bitcoin::Transaction $arg } 1 .. $arg->read_compact_size ];
+
+	die "Merkle's tree root verification failed"
+	if pack('H*', $this->{hashMerkleRoot}) ne reverse +($this->Merkle_tree)[-1];
 	return $this;
     }
     else { return SUPER::new $class @_ }
@@ -37,10 +41,31 @@ sub unbless {
 }
 
 sub serialize {
+    use Bitcoin::DataStream;
     my $this = shift->_no_class;
-    $this->SUPER::header .
-    ($this->{version} & (1 << 8) ? do {...} : '') .
-    join '', map $_->serialize, @{$_->{transactions}};
+    my $os = new Bitcoin::DataStream;
+    Write $os $this->header;
+    Write $os $this->{version} & (1 << 8) ? do {...} : '';
+    my @transactions = @{$this->{transactions}};
+    write_compact_size $os scalar @transactions;
+    Write $os $_->serialize->input for @transactions;
+    return $os;
+}
+
+sub Merkle_tree {
+    # This is a straightforward translation of Satoshi's code
+    my $this = shift->_no_class;
+    my @MerkleTree;
+    my @transactions = @{$this->{transactions}};
+    push @MerkleTree, $_->get_hash for @transactions;
+    for( my $j = 0, my $size = @transactions; $size > 1; $size = int( ($size + 1) / 2 ) ) {
+	for ( my $i = 0; $i < $size; $i += 2 ) {
+	    my $i2 = $i + 1 < $size - 1 ? $i + 1 : $size - 1;
+	    push @MerkleTree, Bitcoin::hash $MerkleTree[$j + $i] . $MerkleTree[$j + $i2];
+	}
+	$j += $size;
+    }
+    return @MerkleTree;
 }
 
 package Bitcoin::Block::HEADER;
@@ -59,8 +84,8 @@ sub new {
     if (ref $arg eq 'Bitcoin::DataStream') {
 	return bless({
 		version        => $arg->Read(INT32),
-		hashPrev       => unpack('H*', reverse $arg->read_bytes(32)),
-		hashMerkleRoot => unpack('H*', reverse $arg->read_bytes(32)),
+		hashPrev       => unpack('H*', reverse $arg->Read(BYTE . 32)),
+		hashMerkleRoot => unpack('H*', reverse $arg->Read(BYTE . 32)),
 		nTime          => $arg->Read(UINT32),
 		nBits          => $arg->Read(UINT32),
 		nNonce         => $arg->Read(UINT32),
