@@ -1,7 +1,9 @@
 #!/usr/bin/perl -w
 use Bitcoin;
+use Bitcoin::Database;
+
 package Bitcoin::Block;
-@ISA = qw(Bitcoin::Block::HEADER);
+our @ISA = qw(Bitcoin::Block::HEADER);  # see below
 use strict;
 use warnings;
 
@@ -27,6 +29,7 @@ sub new {
 
 	return $this;
     }
+    elsif (ref $arg eq 'Regexp') { return $ISA[0]->new($arg) }
     else { return SUPER::new $class @_ }
 }
 
@@ -44,15 +47,17 @@ sub unbless {
 sub serialize {
     use Bitcoin::DataStream;
     my $this = shift->_no_class;
-    my $os = new Bitcoin::DataStream;
-    Write $os SUPER::serialize $this;
-    Write $os $this->{version} & (1 << 8) ? do {...} : '';
+    my $stream = new Bitcoin::DataStream;
+    Write $stream SUPER::serialize $this;
+    Write $stream $this->{version} & (1 << 8) ? do {...} : '';
     my @transactions = @{$this->{transactions}};
-    write_compact_size $os scalar @transactions;
-    Write $os $_->serialize->input for @transactions;
-    return $os;
+    write_compact_size $stream scalar @transactions;
+    Write $stream $_->serialize->input for @transactions;
+    return $stream;
 }
 sub get_hash { my $this = shift->_no_class; Bitcoin::hash $this->SUPER::serialize }
+
+sub header { my $this = shift; $ISA[0]->new($this->serialize) }
 
 sub Merkle_tree {
     # This is a straightforward translation of Satoshi's code
@@ -72,9 +77,15 @@ sub Merkle_tree {
 
 package Bitcoin::Block::HEADER;
 
-use Bitcoin::Database;
 use Bitcoin::DataStream qw(:types);
 use Bitcoin::Transaction;
+
+use overload '""' => sub {
+    my $_ = shift;
+    sprintf 'Bitcoin block created on %s: %s',
+    qx(date -Rd \@$_->{nTime}) =~ s/\n//r,
+    unpack 'H*', reverse $_->get_hash;
+};
 
 sub _no_class;
 sub _no_instance;
@@ -92,54 +103,19 @@ sub new {
 		nNonce         => $arg->Read(UINT32),
 	    }, $class)->check_proof_of_work;
     }
-    elsif (ref $arg eq 'HASH') {...}
-    elsif (@_ > 1 and @_ % 2 == 0) { new $class +{ @_ } }
-    elsif ($arg =~ /^[a-f\d]+$/ or ref $arg eq 'Regexp') {
-	import Bitcoin::Database 'blkindex';
-	my $cursor = $Bitcoin::Database::blkindex->db_cursor;
-	my ($prefix,) = map chr(length). $_, 'blockindex';
-	my ($k, $v) = ($prefix, '');
-	my ($nFile, $nBlockPos);
-	if ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) {
-	    $k .= reverse pack 'H*', $arg;
-	    $cursor->c_get($k, $v, BerkeleyDB::DB_SET);
-	    die 'no such block' if $cursor->status;
-	    die "block entry was removed" unless defined $v;
-	    my $vds = new Bitcoin::DataStream $v;
-	    $vds->Read(INT32);  # version
-	    $vds->Read(BYTE . 32);  # hashNext
-	    $nFile        = $vds->Read(UINT32);
-	    $nBlockPos    = $vds->Read(UINT32);
-	}
-	elsif ($arg =~ /^\d+$/ or ref $arg eq 'Regexp') {
-	    my @result;
-	    SEARCH: {
-		$cursor->c_get($k, $v, BerkeleyDB::DB_SET_RANGE);
-		do {
-		    my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
-		    last SEARCH if $kds->Read(STRING) ne 'blockindex';
-		    my $hash = unpack 'H*', reverse $kds->Read(BYTE . 32);
-		    if (ref $arg eq 'Regexp') { push @result, $hash if $hash =~ $arg }
-		    else {
-			$vds->Read(INT32);  # version
-			$vds->Read(BYTE . 32);  # hashNext
-			$nFile        = $vds->Read(UINT32);
-			$nBlockPos    = $vds->Read(UINT32);
-			my $nHeight   = $vds->Read(INT32);
-			last SEARCH if $nHeight == $arg;
-		    }
-		} until $cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
-	    }
-	    if (@result > 1) { return { map { $_ => ($class.'::HEADER')->new($_) } @result } }
-	    elsif (@result == 1) { return new $class shift @result }
-	    elsif (ref $arg eq 'Regexp') { die "no matching block" }
-	}
-	else { die 'wrong argument format' }
-	return new $class Bitcoin::DataStream->new->map_file(
-	    sprintf('%s/blk%04d.dat', Bitcoin::DATA_DIR, $nFile),
-	    $nBlockPos
-	);
+    elsif (ref $arg ~~ [ qw(HASH Regexp) ]) {
+	my $index = new Bitcoin::Disk::Block::Index $arg;
+	my @result = map { new $class $_ } keys %$index;
+	return @result > 1 ? @result : @result ? $result[0] : ();
     }
+    elsif ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) {
+	my $index = new Bitcoin::Disk::Block::Index $arg;
+	return new $class Bitcoin::DataStream->new->map_file(
+	sprintf('%s/blk%04d.dat', Bitcoin::DATA_DIR, $index->{$arg}{nFile}),
+	$index->{$arg}{nBlockPos})
+    }
+    elsif ($arg =~ /^\d+$/)        { new $class +{ nHeight => $arg } }
+    elsif (@_ > 1 and @_ % 2 == 0) { new $class +{ @_ } }
     elsif ( not defined ref $arg ) { new $class new Bitcoin::DataStream $arg }
     else { die "wrong argument format" }
 }
@@ -176,7 +152,29 @@ sub check_proof_of_work {
 }
 
 package Bitcoin::Block::Index;
-# TODO
+
+
+package Bitcoin::Disk::Block::Index;
+our @ISA = qw(Bitcoin::Disk::Index);
+
+sub prefix() { 'blockindex' }
+sub indexed_object() { shift }
+
+sub new {
+    my $class = shift; die 'instance method call not implemented for this class' if ref $class;
+    my $arg = shift;
+    if (ref($arg) eq 'Bitcoin::DataStream') {
+	use Bitcoin::DataStream qw(:types);
+	return bless {
+	    version   => $arg->Read(INT32),
+	    hashNext  => $arg->Read(BYTE . 32),
+	    nFile     => $arg->Read(UINT32),
+	    nBlockPos => $arg->Read(UINT32),
+            nHeight   => $arg->Read(INT32),
+	}, $class;
+    }
+    else { SUPER::new $class $arg }
+}
 
 package Bitcoin::Block::Locator;
 # TODO
@@ -193,15 +191,17 @@ Bitcoin::Block
 
     use Bitcoin::Block;
 
-    my $block = new Bitcoin::Block 121_899;
     my $block = new Bitcoin::Block Bitcoin::GENESIS;
+    my $block = new Bitcoin::Block 121_899;
     my @block = new Bitcoin::Block qr/^0+19/;
     my $block = new Bitcoin::Block $binary_block;
-    my $block = new Bitcoin::Block -prevHash => '0x.....', -MerkleRoot => '.....', ...  ;
-    my $block = new Bitcoin::Block { prevHash => '0x.....', MerkleRoot => '.....', ... } ;
+    my @block = new Bitcoin::Block -prevHash => '0x.....', -MerkleRoot => '.....', ...  ;
+    my @block = new Bitcoin::Block { prevHash => '0x.....', MerkleRoot => '.....', ... } ;
 
-    print Bitcoin::hash_hex $block->serialize;
+    # human-friendly summary
+    say $block;
 
+    # Full dump
     use Data::Dumper;
     print +Dumper $block;
     print +Dumper unbless $block;
@@ -214,6 +214,13 @@ This class encapsulates a bitcoin block.
 
 When a hash, a regex, or a block number is provided, the constructor opens the bitcoin
 database and searches for the corresponding block(s).
+
+In scalar context, the constructor returns a single object if the result of the search was unique.
+Overwise it returns the number of results.
+
+In list context, it returns a possibly empty list of matching objects.
+
+Proof of work and Merkle root are verified during instanciation.
 
 =head1 AUTHOR
 

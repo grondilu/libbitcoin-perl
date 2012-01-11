@@ -51,36 +51,43 @@ sub indexed_object();
 sub new {
     my $class = shift;
     my $arg = shift;
+    my $cursor = $Bitcoin::Database::blkindex->db_cursor;
+    my ($prefix,) = map chr(length). $_, $class->prefix;
+    my ($k, $v) = ($prefix, '');
+    my $index = bless {}, $class;
     if ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) {
-	my $cursor = $Bitcoin::Database::blkindex->db_cursor;
-	my ($prefix,) = map chr(length). $_, $class->prefix;
-	my ($k, $v) = ($prefix, '');
-	if ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) {
-	    # exact search
-	    $k .= reverse pack 'H*', $arg;
-	    $cursor->c_get($k, $v, BerkeleyDB::DB_SET);
-	    die 'no such entry' if $cursor->status;
-	    die "entry was removed" unless defined $v;
-	    return bless { $k => $class->indexed_object->new($v) }, $class;
-	}
-	elsif (ref $arg eq 'Regexp') {
-	    # regex search
-	    my $result = {};
-	    SEARCH: {
-		$cursor->c_get($k, $v, BerkeleyDB::DB_SET_RANGE);
-		do {
-		    use Bitcoin::DataStream qw(:types);
-		    my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
-		    last SEARCH if $kds->Read(STRING) ne $class->prefix;
-		    my $hash = unpack 'H*', reverse $kds->Read(BYTE . 32);
-		    $result->{$hash} = $class->indexed_object->new($v) if $hash =~ $arg;
-		} until $cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
-	    }
-	    if (keys(%$result) > 0) { return bless $result, $class }
-	    else { die 'no result' }
-	}
-	else { die 'wrong argument format' }
+	# exact search
+	$k .= reverse pack 'H*', $arg;
+	$cursor->c_get($k, $v, BerkeleyDB::DB_SET);
+	die 'no such entry' if $cursor->status;
+	die "entry was removed" unless defined $v;
+	use Bitcoin::DataStream;
+	$index->{$arg} = $class->indexed_object->new(new Bitcoin::DataStream $v);
     }
+    elsif (ref $arg ~~ [qw(Regexp HASH)]) {
+	# regex search
+	use Bitcoin::DataStream qw(:types);
+	SEARCH: {
+	    $cursor->c_get($k, $v, BerkeleyDB::DB_SET_RANGE);
+	    do {
+		my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
+		last SEARCH if $kds->Read(STRING) ne $class->prefix;
+		my $hash = unpack 'H*', reverse $kds->Read(BYTE . 32);
+		if (ref $arg eq 'Regexp') {
+		    $index->{$hash} = $class->indexed_object->new($vds) if $hash =~ $arg;
+		}
+		else {
+		    my $indexed_object = $class->indexed_object->new($vds);
+		    for ( grep { exists $indexed_object->{$_} } keys %$arg ) {
+			if ($arg->{$_} ne $indexed_object->{$_}) { undef $indexed_object; last }
+		    }
+		    $index->{$hash} = $indexed_object if defined $indexed_object;
+		}
+	    } until $cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
+	}
+    }
+    else {...}
+    return $index;
 }
 
 
