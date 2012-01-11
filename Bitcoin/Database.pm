@@ -40,6 +40,50 @@ sub import {
     }
 }
 
+package Bitcoin::Disk::Index;
+# virtual base class for Bitcoin::Disk::Block::Index (aka CDiskBlockIndex) and
+# Bitcoin::Disk::Tx::Index (aka CDiskTxPos)
+import Bitcoin::Database 'blkindex';
+
+sub prefix();
+sub indexed_object();
+
+sub new {
+    my $class = shift;
+    my $arg = shift;
+    if ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) {
+	my $cursor = $Bitcoin::Database::blkindex->db_cursor;
+	my ($prefix,) = map chr(length). $_, $class->prefix;
+	my ($k, $v) = ($prefix, '');
+	if ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) {
+	    # exact search
+	    $k .= reverse pack 'H*', $arg;
+	    $cursor->c_get($k, $v, BerkeleyDB::DB_SET);
+	    die 'no such entry' if $cursor->status;
+	    die "entry was removed" unless defined $v;
+	    return bless { $k => $class->indexed_object->new($v) }, $class;
+	}
+	elsif (ref $arg eq 'Regexp') {
+	    # regex search
+	    my $result = {};
+	    SEARCH: {
+		$cursor->c_get($k, $v, BerkeleyDB::DB_SET_RANGE);
+		do {
+		    use Bitcoin::DataStream qw(:types);
+		    my ($kds, $vds) = map { new Bitcoin::DataStream $_ } $k, $v;
+		    last SEARCH if $kds->Read(STRING) ne $class->prefix;
+		    my $hash = unpack 'H*', reverse $kds->Read(BYTE . 32);
+		    $result->{$hash} = $class->indexed_object->new($v) if $hash =~ $arg;
+		} until $cursor->c_get($k, $v, BerkeleyDB::DB_NEXT);
+	    }
+	    if (keys(%$result) > 0) { return bless $result, $class }
+	    else { die 'no result' }
+	}
+	else { die 'wrong argument format' }
+    }
+}
+
+
 1;
 
 

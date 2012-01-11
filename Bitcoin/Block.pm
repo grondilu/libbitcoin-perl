@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+use Bitcoin;
 package Bitcoin::Block;
 @ISA = qw(Bitcoin::Block::HEADER);
 use strict;
@@ -8,7 +9,6 @@ sub new {
     my $class = shift->_no_instance;
     my $arg = $_[0];
     if (ref $arg eq 'Bitcoin::DataStream') {
-	use Bitcoin;
 	my $this = SUPER::new $class $arg;
 
 	if (!Bitcoin::TEST and $this->{version} & (1 << 8)) {
@@ -24,6 +24,7 @@ sub new {
 
 	die "Merkle's tree root verification failed"
 	if pack('H*', $this->{hashMerkleRoot}) ne reverse +($this->Merkle_tree)[-1];
+
 	return $this;
     }
     else { return SUPER::new $class @_ }
@@ -44,13 +45,14 @@ sub serialize {
     use Bitcoin::DataStream;
     my $this = shift->_no_class;
     my $os = new Bitcoin::DataStream;
-    Write $os $this->header;
+    Write $os SUPER::serialize $this;
     Write $os $this->{version} & (1 << 8) ? do {...} : '';
     my @transactions = @{$this->{transactions}};
     write_compact_size $os scalar @transactions;
     Write $os $_->serialize->input for @transactions;
     return $os;
 }
+sub get_hash { my $this = shift->_no_class; Bitcoin::hash $this->SUPER::serialize }
 
 sub Merkle_tree {
     # This is a straightforward translation of Satoshi's code
@@ -70,7 +72,6 @@ sub Merkle_tree {
 
 package Bitcoin::Block::HEADER;
 
-use Bitcoin;
 use Bitcoin::Database;
 use Bitcoin::DataStream qw(:types);
 use Bitcoin::Transaction;
@@ -146,7 +147,7 @@ sub new {
 sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }
 sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }
 
-sub header {
+sub serialize {
     my $this = shift->_no_class;
     pack
     INT32  .
@@ -159,16 +160,18 @@ sub header {
     map $this->{$_}, qw(nTime nBits nNonce);
 }
 
+sub get_hash { my $this = shift->_no_class; Bitcoin::hash $this->serialize }
+
 sub check_proof_of_work {
     my $_ = shift;
-    if (ref) { ref->check_proof_of_work($_->header, $_->{nBits}); return $_ }
+    if (ref) { ref->check_proof_of_work($_->get_hash, $_->{nBits}); return $_ }
     else {
 	use bigint;
-	my ($header, $nBits) = @_;
+	my ($hash, $nBits) = @_;
 	my ($size, $n) = map hex($_), (0+$nBits)->as_hex  =~ /0x(..)(.{6})/;
 	my $target = $n * 256**($size - 3);
 	die "target doesn't provide minimum work" if $target > 2**(256 - Bitcoin::PROOF_OF_WORK_LIMIT) - 1;
-	die "hash doesn't match nBits" if $target < hex Bitcoin::hash_hex $header;
+	die "hash doesn't match nBits" if $target < hex unpack 'H*', reverse $hash;
     }
 }
 

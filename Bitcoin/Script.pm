@@ -33,13 +33,13 @@ sub code {
 sub unbless { [ map $_->unbless, @{shift()} ] }
 
 package Bitcoin::Script::Atom;
+our @ISA = qw(Bitcoin::Script);
 require Bitcoin::Script::Codes;
 use overload
 q(@{})	=> sub { [ shift ] },
 q(&{})	=> sub {...},
 ;
 
-our @ISA = qw(Bitcoin::Script);
 sub new {
     my $class = shift; die 'instance method call not implemented' if ref $class;
     my $arg   = shift;
@@ -69,6 +69,7 @@ use overload
 q(&{})	=> sub { my $this = shift; sub { use Bitcoin::Script::Stack qw(Push); Push $this->data } },
 ;
 
+sub data { my $this = shift; substr pack('H*', $this->{code}), $this->{offset} }
 sub new {
     my $class = shift; die 'instance method call not implemented' if ref $class;
     my $arg = shift;
@@ -100,7 +101,6 @@ sub new {
 	}
     }
 }
-sub data { my $this = shift; substr pack('H*', $this->{code}), $this->{offset} }
 
 package Bitcoin::Script::PushData::ASCII;
 our @ISA = qw(Bitcoin::Script::PushData);
