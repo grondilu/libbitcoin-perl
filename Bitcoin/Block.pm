@@ -120,8 +120,8 @@ sub new {
 	grep { $_->{nHeight} < $arg }
 	map { Bitcoin::Disk::Block::Index->new($_)->{$_} }
 	Bitcoin::GENESIS, keys %{+Bitcoin::CHECKPOINTS};
-	my $indexed_block = pop @preceding_checkpoint;
 	my $hash;
+	my $indexed_block = pop @preceding_checkpoint;
 	while ($indexed_block->{nHeight} < $arg) {
 	    $hash = unpack 'H*', reverse $indexed_block->{hashNext} // die 'reached block chain end';
 	    $indexed_block = Bitcoin::Disk::Block::Index->new($hash)->{$hash};
@@ -166,26 +166,12 @@ sub check_proof_of_work {
 }
 
 package Bitcoin::Block::Index;   # aka CBlockIndex
-# here the inheritance is opposite to the vanilla implementation
-our @ISA = qw(Bitcoin::Disk::Block::Index);
 
 sub new {
     my $class = shift; die 'instance method call not implemented for this class' if ref $class;
     my $arg = shift;
-    if (ref $arg eq 'Bitcoin::Block') {...}
-    else { SUPER::new $class $arg }
-}
-
-package Bitcoin::Disk::Block::Index;  # aka CDiskBlockIndex
-our @ISA = qw(Bitcoin::Disk::Index);
-
-sub prefix() { 'blockindex' }
-sub indexed_object() { shift }
-
-sub new {
-    my $class = shift; die 'instance method call not implemented for this class' if ref $class;
-    my $arg = shift;
-    if (ref($arg) eq 'Bitcoin::DataStream') {
+    if    (ref $arg eq 'Bitcoin::Block')      {...}
+    elsif (ref $arg eq 'Bitcoin::DataStream') {
 	use Bitcoin::DataStream qw(:types);
 	return bless {
 	    version   => $arg->Read(INT32),
@@ -195,8 +181,14 @@ sub new {
             nHeight   => $arg->Read(INT32),
 	}, $class;
     }
-    else { SUPER::new $class $arg }
+    else {...}
 }
+
+package Bitcoin::Disk::Block::Index;  # aka CDiskBlockIndex
+our @ISA = qw(Bitcoin::Disk::Index);
+
+sub prefix() { 'blockindex' }
+sub indexed_object() { 'Bitcoin::Block::Index' }
 
 package Bitcoin::Block::Locator;
 # TODO
