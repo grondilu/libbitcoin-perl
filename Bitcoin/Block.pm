@@ -111,10 +111,24 @@ sub new {
     elsif ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) {
 	my $index = new Bitcoin::Disk::Block::Index $arg;
 	return new $class Bitcoin::DataStream->new->map_file(
-	sprintf('%s/blk%04d.dat', Bitcoin::DATA_DIR, $index->{$arg}{nFile}),
-	$index->{$arg}{nBlockPos})
+	    sprintf('%s/blk%04d.dat', Bitcoin::DATA_DIR, $index->{$arg}{nFile}),
+	    $index->{$arg}{nBlockPos})
     }
-    elsif ($arg =~ /^\d+$/)        { new $class +{ nHeight => $arg } }
+    elsif ($arg =~ /^\d+$/)        {
+	my @preceding_checkpoint =
+	sort { $a->{nHeight} <=> $b->{nHeight} } 
+	grep { $_->{nHeight} < $arg }
+	map { Bitcoin::Disk::Block::Index->new($_)->{$_} }
+	Bitcoin::GENESIS, keys %{+Bitcoin::CHECKPOINTS};
+	my $indexed_block = pop @preceding_checkpoint;
+	my $hash;
+	while ($indexed_block->{nHeight} < $arg) {
+	    $hash = unpack 'H*', reverse $indexed_block->{hashNext} // die 'reached block chain end';
+	    $indexed_block = Bitcoin::Disk::Block::Index->new($hash)->{$hash};
+	}
+	return new $class $hash if $indexed_block->{nHeight} == $arg;
+	die 'no such block';
+    }
     elsif (@_ > 1 and @_ % 2 == 0) { new $class +{ @_ } }
     elsif ( not defined ref $arg ) { new $class new Bitcoin::DataStream $arg }
     else { die "wrong argument format" }
@@ -151,10 +165,18 @@ sub check_proof_of_work {
     }
 }
 
-package Bitcoin::Block::Index;
+package Bitcoin::Block::Index;   # aka CBlockIndex
+# here the inheritance is opposite to the vanilla implementation
+our @ISA = qw(Bitcoin::Disk::Block::Index);
 
+sub new {
+    my $class = shift; die 'instance method call not implemented for this class' if ref $class;
+    my $arg = shift;
+    if (ref $arg eq 'Bitcoin::Block') {...}
+    else { SUPER::new $class $arg }
+}
 
-package Bitcoin::Disk::Block::Index;
+package Bitcoin::Disk::Block::Index;  # aka CDiskBlockIndex
 our @ISA = qw(Bitcoin::Disk::Index);
 
 sub prefix() { 'blockindex' }
