@@ -89,7 +89,7 @@ sub _no_instance;
 
 sub new {
     my $class = shift->_no_instance;
-    my $arg = $_[0];
+    my $arg = $_[0] // return;
     if (ref $arg eq 'Bitcoin::DataStream') {
 	return bless({
 		version        => $arg->Read(INT32),
@@ -114,10 +114,10 @@ sub new {
     elsif ($arg =~ /^\d+$/)        {
 	my @preceding_checkpoint =
 	sort { $a->{nHeight} <=> $b->{nHeight} } 
-	grep { $_->{nHeight} < $arg }
+	grep { $_->{nHeight} <= $arg }
 	map eval { Bitcoin::Disk::Block::Index->new($_)->{$_} },
 	Bitcoin::GENESIS, keys %{+Bitcoin::CHECKPOINTS};
-	my $hash;
+	my $hash = Bitcoin::GENESIS;
 	my $indexed_block = pop @preceding_checkpoint;
 	while ($indexed_block->{nHeight} < $arg) {
 	    $hash = unpack 'H*', reverse $indexed_block->{hashNext} // die 'reached block chain end';
