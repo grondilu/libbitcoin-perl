@@ -34,25 +34,25 @@ use constant CREDITS	=> 'Satoshi Nakamoto', 'Gavin Andersen', 'bitcoin developpe
 use constant IRC	=> 'irc.lfnet.org', '6667', '#bitcoin'. (TEST ? 'TEST' : '');
 
 use constant CHECKPOINTS => {
-     11111 => "0x0000000069e244f73d78e8fd29ba2fd2ed618bd6fa2ee92559f542fdb26e7c1d",
-     33333 => "0x000000002dd5588a74784eaa7ab0507a18ad16a236e7b1ce69f00d7ddfb5d0a6",
-     68555 => "0x00000000001e1b4903550a0b96e9a9405c8a95f387162e4944e8d9fbe501cd6a",
-     70567 => "0x00000000006a49b14bcf27462068f1264c961f11fa2e0eddd2be0791e1d4124a",
-     74000 => "0x0000000000573993a3c9e41ce34471c079dcf5f52a0e824a81e7f953b8661a20",
-    105000 => "0x00000000000291ce28027faea320c8d2b054b2e0fe44a773f3eefb151d6bdc97",
-    118000 => "0x000000000000774a7f8a7a12dc906ddb9e17e75d684f15e00f8767f9e8f36553",
-    134444 => "0x00000000000005b12ffd4cd315cd34ffd4a594f430ac814c91184a0d42d2b0fe",
-    140700 => "0x000000000000033b512028abb90e1626d8b346fd0ed598ac0a3c371138dce2bd",
+   '0000000069e244f73d78e8fd29ba2fd2ed618bd6fa2ee92559f542fdb26e7c1d' =>  11111,
+   '000000002dd5588a74784eaa7ab0507a18ad16a236e7b1ce69f00d7ddfb5d0a6' =>  33333,
+   '00000000001e1b4903550a0b96e9a9405c8a95f387162e4944e8d9fbe501cd6a' =>  68555,
+   '00000000006a49b14bcf27462068f1264c961f11fa2e0eddd2be0791e1d4124a' =>  70567,
+   '0000000000573993a3c9e41ce34471c079dcf5f52a0e824a81e7f953b8661a20' =>  74000,
+   '00000000000291ce28027faea320c8d2b054b2e0fe44a773f3eefb151d6bdc97' => 105000,
+   '000000000000774a7f8a7a12dc906ddb9e17e75d684f15e00f8767f9e8f36553' => 118000,
+   '00000000000005b12ffd4cd315cd34ffd4a594f430ac814c91184a0d42d2b0fe' => 134444,
+   '000000000000033b512028abb90e1626d8b346fd0ed598ac0a3c371138dce2bd' => 140700,
 };
 
 sub hash160 {
-    return scalar qx/
+    scalar qx/
     perl -e 'print pack q(b*), "@{[unpack 'b*', shift]}"' |
     openssl dgst -sha256 -binary |
     openssl dgst -rmd160 -binary
     /;
 }
-sub hash160_hex { return unpack 'H*', hash160 @_ }
+sub hash160_hex { unpack 'H*', hash160 @_ }
 
 sub hash;
 sub hash_hex;
@@ -98,7 +98,9 @@ It currently contains:
 
 =item * hash functions such as C<hash160> which is actually a SHA-256 followed by a RIPEMD-160 ;
 
-=item * The genesis hash code
+=item * The genesis hash code;
+
+=item * the blockchain checkpoints;
 
 =back
 

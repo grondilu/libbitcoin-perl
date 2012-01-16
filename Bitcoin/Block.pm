@@ -29,7 +29,6 @@ sub new {
 
 	return $this;
     }
-    elsif (ref $arg eq 'Regexp') { return $ISA[0]->new($arg) }
     else { return SUPER::new $class @_ }
 }
 
@@ -56,8 +55,6 @@ sub serialize {
     return $stream;
 }
 sub get_hash { my $this = shift->_no_class; Bitcoin::hash $this->SUPER::serialize }
-
-sub header { my $this = shift; $ISA[0]->new($this->serialize) }
 
 sub Merkle_tree {
     # This is a straightforward translation of Satoshi's code
@@ -118,7 +115,7 @@ sub new {
 	my @preceding_checkpoint =
 	sort { $a->{nHeight} <=> $b->{nHeight} } 
 	grep { $_->{nHeight} < $arg }
-	map { Bitcoin::Disk::Block::Index->new($_)->{$_} }
+	map eval { Bitcoin::Disk::Block::Index->new($_)->{$_} },
 	Bitcoin::GENESIS, keys %{+Bitcoin::CHECKPOINTS};
 	my $hash;
 	my $indexed_block = pop @preceding_checkpoint;
@@ -151,17 +148,18 @@ sub serialize {
 }
 
 sub get_hash { my $this = shift->_no_class; Bitcoin::hash $this->serialize }
+sub get_hash_hex { my $this = shift->_no_class; unpack 'H*', reverse $this->get_hash }
 
 sub check_proof_of_work {
     my $_ = shift;
-    if (ref) { ref->check_proof_of_work($_->get_hash, $_->{nBits}); return $_ }
+    if (ref) { ref->check_proof_of_work($_->get_hash_hex, $_->{nBits}); return $_ }
     else {
 	use bigint;
-	my ($hash, $nBits) = @_;
+	my ($hash_hex, $nBits) = @_;
 	my ($size, $n) = map hex($_), (0+$nBits)->as_hex  =~ /0x(..)(.{6})/;
 	my $target = $n * 256**($size - 3);
 	die "target doesn't provide minimum work" if $target > 2**(256 - Bitcoin::PROOF_OF_WORK_LIMIT) - 1;
-	die "hash doesn't match nBits" if $target < hex unpack 'H*', reverse $hash;
+	die "hash doesn't match nBits" if $target < hex $hash_hex;
     }
 }
 
@@ -186,8 +184,7 @@ sub new {
 
 package Bitcoin::Disk::Block::Index;  # aka CDiskBlockIndex
 our @ISA = qw(Bitcoin::Disk::Index);
-
-sub prefix() { 'blockindex' }
+sub prefix()         { 'blockindex' }
 sub indexed_object() { 'Bitcoin::Block::Index' }
 
 package Bitcoin::Block::Locator;

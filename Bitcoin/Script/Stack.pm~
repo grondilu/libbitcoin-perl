@@ -4,6 +4,10 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(Push Pop Dup Rot Nip Tuck Swap);
 
+use strict;
+use warnings;
+
+our $AUTOLOAD;
 sub AUTOLOAD {...}
 
 my (@S, @alt_S);	# main and alternate stacks

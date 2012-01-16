@@ -1,13 +1,12 @@
 #!/usr/bin/perl
 # elliptic curve cryptography in Perl
 
-
 package EC::Curves;
 use strict;
 use warnings;
-use bigint;
 
 # secp256k1, http://www.oid-info.com/get/1.3.132.0.10
+use bigint;
 use constant secp256k1 => {
     p => hex('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F'),
     b => hex('0x0000000000000000000000000000000000000000000000000000000000000007'),
@@ -18,7 +17,6 @@ use constant secp256k1 => {
 	hex('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141'),
     ], 'Point'
 };
-
 no bigint;
 
 package EC;
@@ -107,21 +105,22 @@ sub import {
 
 package EC::Point;
 use overload
-'+' => sub { bless EC::add @_[0..1] },
-'*' => sub { die 'wrong argument order in multiplication' unless $_[2]; bless EC::mult @_[1,0] },
+'+' => sub { $_[0]->add($_[1]) },
+'*' => sub { $_[2] ? $_->[1]->mult($_[0]) : $_[0]->mult($_[1]) },
 q("") => sub {
     my $_ = shift;
     return @$_ ?
     sprintf "Point at x=%s, y=%s", @$_[0,1] :
     'Point at horizon';
-};
+},
+'bool' => sub { my $_ = shift; @$_ > 0 },
+;
 
-package EC::BigInt;
-our @ISA = qw(Math::BigInt);
+package Math::BigInt;
+no warnings 'redefine';
 use overload
 '*' => sub {
-    return EC::mult $_[0], $_[1] if ref $_[1] eq 'EC::Point';
-    $_[0]->bmul($_[1]);
+    return ref($_[1]) eq 'EC::Point' ? $_[1]->mult($_[0]) : $_[0]->copy->bmul($_[1]);
 };
 
 package EC::DSA::PublicKey;
@@ -132,7 +131,7 @@ sub new {
     die "constructor's instance method call not implemented" if ref(my $class = shift);
     my ($generator, $point) = @_;
     die "generator should have an order" unless defined(my $n = $$generator[2]);
-    die "bad order for generator" if defined EC::mult $n, $generator;
+    die "bad order for generator" if EC::mult $n, $generator;
     bless [ map EC::check($_), $generator, $point ], $class;
 }
 sub verifies {

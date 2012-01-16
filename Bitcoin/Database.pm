@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Bitcoin;
-use constant NAMES => qw(blkindex);
+use constant NAMES => qw(blkindex addr);
 
 use BerkeleyDB;
 # we have to to the following to avoid some annoying warnings from BerkeleyDB
@@ -13,6 +13,9 @@ END { undef $BerkeleyDB::Term::Env; undef $BerkeleyDB::Term::Db }
 
 our ($blkindex, %blkindex);
 END { undef $blkindex, untie %blkindex if defined $blkindex }
+
+our ($addr, %addr);
+END { undef $addr, untie %addr if defined $addr }
 
 our $Env = new BerkeleyDB::Env  
     -Home => Bitcoin::DATA_DIR,
@@ -42,8 +45,7 @@ sub import {
 
 package Bitcoin::Disk::Index;
 # virtual base class for Bitcoin::Disk::Block::Index (aka CDiskBlockIndex) and
-# Bitcoin::Disk::Tx::Index (aka CDiskTxPos)
-import Bitcoin::Database 'blkindex';
+# Bitcoin::Disk::Tx::Index (aka CDiskTxIndex)
 
 sub prefix();
 sub indexed_object();
@@ -51,6 +53,7 @@ sub indexed_object();
 sub new {
     my $class = shift;
     my $arg = shift;
+    import Bitcoin::Database 'blkindex' unless defined $Bitcoin::Database::blkindex;
     my $cursor = $Bitcoin::Database::blkindex->db_cursor;
     my ($prefix,) = map chr(length). $_, $class->prefix;
     my ($k, $v) = ($prefix, '');
