@@ -55,7 +55,7 @@ sub new {
 	$index->{$arg} = $class->indexed_object->new(new Bitcoin::DataStream $v);
     }
     elsif (ref $arg ~~ [qw(Regexp HASH)]) {
-	# regex search
+	# regex or hash search
 	use Bitcoin::DataStream qw(:types);
 	SEARCH: {
 	    $cursor->c_get($k, $v, BerkeleyDB::DB_SET_RANGE);
@@ -94,6 +94,8 @@ Bitcoin::Database
 
     use Bitcoin::Database;
 
+    my $index = new Bitcoin::Database 'blkindex';
+
 =head1 DESCRIPTION
 
 This modules provides database environnement for opening bitcoin database created by the vanilla client.
@@ -101,19 +103,6 @@ This modules provides database environnement for opening bitcoin database create
 This module is mostly for internal use, as it merely provides tools for
 configuring the BerkeleyDB, but it DOES NOT parse the bitcoin-related
 serialisation format.  Use Bitcoin::Block or Bitcoin::Transaction to do this.
-
-=head2 Import mechanism
-
-The import mechanism DOES NOT import symbols in the lexical scope as it does usually.  Instead, it is designed to select
-the databases that you want to load.
-
-    use Bitcoin::Database;                        # does not load any database
-    use Bitcoin::Database qw(blkindex);           # loads the index database
-    use Bitcoin::Database qw(wallet);             # loads the wallet
-
-Once loaded, a database can be accessed using a scalar variable pointing to the BerkeleyDB object.
-
-    $Bitcoin::Database::blkindex->db_get($k, $v, BerkeleyDB::DB_SET);
 
 =head1 AUTHOR
 
