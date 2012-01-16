@@ -1,46 +1,33 @@
 #!/usr/bin/perl
 package Bitcoin::Database;
+use BerkeleyDB;
+@ISA = qw(BerkeleyDB::Btree);
 use strict;
 use warnings;
 
-use Bitcoin;
-use constant NAMES => qw(blkindex addr);
-
-use BerkeleyDB;
 # we have to to the following to avoid some annoying warnings from BerkeleyDB
 END { undef $BerkeleyDB::Term::Env; undef $BerkeleyDB::Term::Db }
 END { undef $BerkeleyDB::Term::Env; undef $BerkeleyDB::Term::Db }
 
-our ($blkindex, %blkindex);
-END { undef $blkindex, untie %blkindex if defined $blkindex }
-
-our ($addr, %addr);
-END { undef $addr, untie %addr if defined $addr }
-
+use Bitcoin;
 our $Env = new BerkeleyDB::Env  
     -Home => Bitcoin::DATA_DIR,
     -Flags => DB_CREATE| DB_INIT_LOCK| DB_INIT_LOG| DB_INIT_MPOOL| DB_INIT_TXN| DB_THREAD| DB_RECOVER,
 ;
 
-sub import {
-    my $pkg = shift;
-    if (@_ < 1) { return }
-    elsif (@_ == 1 and $_[0] eq ':all') { $pkg->import( NAMES ) }
-    else {
-	for my $db (@_) {
-	    next unless exists { map { $_ => undef } NAMES }->{$db};
-	    no strict 'refs';
-	    unless (defined ${(__PACKAGE__.'::')->{$db}}) {
-		${(__PACKAGE__.'::')->{$db}} = tie %{(__PACKAGE__.'::')->{$db}}, 'BerkeleyDB::Btree',
-		-Filename => $db.'.dat',
-		-Subname  => 'main',
-		-Env      => $Env,
-		-Flags    => DB_THREAD| DB_RDONLY,
-		    or warn "could not tie $db.dat: $!"
-		;
-	    }
-	}
+sub new {
+    my $class = shift;
+    if (@_ == 1) {
+	my $db = shift;
+	return SUPER::new $class
+	-Filename => $db.'.dat',
+	-Subname  => 'main',
+	-Env      => $Env,
+	-Flags    => DB_THREAD| DB_RDONLY,
+	    or die "could not tie $db.dat: $!"
+	;
     }
+    else {...}
 }
 
 package Bitcoin::Disk::Index;
@@ -53,8 +40,8 @@ sub indexed_object();
 sub new {
     my $class = shift;
     my $arg = shift;
-    import Bitcoin::Database 'blkindex' unless defined $Bitcoin::Database::blkindex;
-    my $cursor = $Bitcoin::Database::blkindex->db_cursor;
+    my $blkindex = new Bitcoin::Database 'blkindex';
+    my $cursor = $blkindex->db_cursor;
     my ($prefix,) = map chr(length). $_, $class->prefix;
     my ($k, $v) = ($prefix, '');
     my $index = bless {}, $class;
