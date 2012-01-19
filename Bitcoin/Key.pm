@@ -133,7 +133,7 @@ Bitcoin::Key, Bitcoin::Key::Secret
     my $key = new Bitcoin::Key::Secret;
     my $key = new Bitcoin::Key::Secret '5JZDTbbezKW7dZSPECIMENSPECIMENSPECIMENxxeMZnZvev8Dy';
     my $key = new Bitcoin::Key::Secret 123456789;
-    my $key = new Bitcoin::Key::Secret <<'...' ;
+    my $key = new Bitcoin::Key::Secret <<'stop' ;
     -----BEGIN EC PARAMETERS-----
     BgUrgQQACg==
     -----END EC PARAMETERS-----
@@ -142,7 +142,9 @@ Bitcoin::Key, Bitcoin::Key::Secret
     oUQDQgAEg/kE+E72DbBSPECIMENSPECIMENSPECIMENEz1/JZ00Qt3wJQQwUC0W9
     7INs0AnqUgxwMyO5JL1TKOf1vP0Zbw==
     -----END EC PRIVATE KEY-----
-    ...
+    stop
+    my $mkey = new Bitcoin::Key::Master;
+    my $subkey = $mkey & 'account #42';
 
     print $key;
     print $key->address;
@@ -155,7 +157,6 @@ Bitcoin::Key, Bitcoin::Key::Secret
     $decrypted_key = $encrypted_key->decrypt('dummy password');
 
     print $key1 + $key2;
-
 
 =head1 DESCRIPTION
 
@@ -249,6 +250,16 @@ curve related calculations.   Addition or multiplication of two keys returns a
 key whose value is the modular sum or multiplication of the keys values.
 Multiplicating a key with a C<'EC::Point'>-blessed reference, in that order,
 returns the elliptic curve multiplication of the point by the key value.
+
+=head2 Master keys
+
+The class Bitcoin::Key::Master inherits from Bitcoin::Key::Secret and implements an additional '&' overloaded opperator.
+It allows creation of an arbitrary number of I<subkeys> from any identifier string.
+
+    my $master_key = new Bitcoin::Key::Master;
+    my $subkey = $master_key & 'some string';
+
+This is a destructive process:  there is no way to retrieve the initial string from the generated key.
 
 =head2 Message signing
 
