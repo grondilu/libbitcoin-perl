@@ -3,6 +3,7 @@ package Bitcoin::Key;
 use strict;
 use warnings;
 use Bitcoin;
+use Bitcoin::Util;
 use Bitcoin::Address;
 
 # EC Settings
@@ -15,15 +16,36 @@ use overload
     return $_[1] & $_[0] if $_[2];
     new Bitcoin::Key::Secret +(Bitcoin::hash_int($_[1]) + $_[0]->value) % $EC::G->[2];
 },
+'<<' => sub {
+    return $_[0] >> $_[1] if $_[2];
+    if    (ref $_[1] ne '')            {...}
+    elsif ($_[1] =~ /\A\d+\Z/)         { $_[0] << Bitcoin::Util::itob $_[1] }
+    else  { new Bitcoin::Key::Secret join '', map $_[0]->twofish->encrypt(pack 'a16', $_), $_[1] =~ /(.{1,16})/gms }
+},
+'>>' => sub {
+    return $_[1] << $_[0] if $_[2];
+    if    (ref $_[1] ne 'Bitcoin::Key::Secret') {...}
+    else { join '', map { $_[0]->twofish->decrypt($_) =~ s/\x{00}+\Z//r } $_[1]->data =~ /(.{16})/gms }
+},
 ;
 
-package Bitcoin::Key::Private;
-# TODO
+sub twofish {
+    use Crypt::Twofish;
+    my $_ = shift->_no_class;
+    return new Crypt::Twofish pack 'a32', $_->data;
+}
 
+package Bitcoin::Key::Private;
+our @ISA = qw(Bitcoin::Key::Secret);
 package Bitcoin::Key::Secret;
 require Bitcoin::Base58;
 our @ISA = qw(Bitcoin::Base58::Data);
 
+use overload '&{}' => sub {
+    my $this = shift;
+    sub { $this->sign(@_) }
+};
+    
 # Redefined methods
 sub size() { 256 }
 sub default_version() { Bitcoin::TEST ? 129 : 128 }
@@ -41,6 +63,8 @@ sub address;
 sub public_point;
 sub cipher;
 sub salt;
+sub sign;
+sub prompt;
 
 # additional operator overloading
 use overload
@@ -51,7 +75,9 @@ use overload
 },
 '*' => sub {
     if ($_[2] or ref $_[1] ne 'EC::Point') {
-	($_[0]->value * $_[1]->value) % $EC::G->[2];
+	my ($a, $b) = @_;
+	warn 'operands are not blessed into the same package' unless ref $a eq ref $b;
+	ref($a)->new(($b->value * $a->value) % $EC::G->[2]);
     }
     else { EC::mult $_[0]->value, $_[1] }
 },
@@ -66,7 +92,8 @@ sub new {
     my $class = shift->_no_instance;
     my $arg = shift;
     my $version = shift;
-    if    (not defined $arg)                 { new $class Bitcoin::randInt }
+    if    (not defined $arg)                 { new $class Bitcoin::Util::randInt }
+    elsif ($arg eq '')                       {...}
     elsif (ref $arg eq 'Crypt::Rijndael')    { (new $class)->encrypt($arg) }
     elsif ($arg =~ m/-+BEGIN [^-]* KEY---/)  { new $class $class->_from_PEM($arg), $version }
     else                                     { SUPER::new $class $arg, $version }
@@ -96,7 +123,8 @@ sub decrypt {
 }
 
 sub public_point { EC::mult shift->_no_class->value, $EC::G }
-sub address { new Bitcoin::Address $_[0]->public_point, $_[1] }
+sub public_key   { new EC::DSA::PublicKey $EC::G, shift->public_point }
+sub address      { new Bitcoin::Address $_[0]->public_point, $_[1] }
 
 sub _from_PEM {
     my $_ = shift->_no_instance;
@@ -114,10 +142,25 @@ sub cipher {
     if (ref($arg) eq 'Crypt::Rijndael') { $arg }
     else {
 	use Crypt::Rijndael;
-	new Crypt::Rijndael sha256($arg || Bitcoin::DUMMY_PASSWD), Crypt::Rijndael::MODE_CBC;
+	Crypt::Rijndael->new(sha256($arg || Bitcoin::DUMMY_PASSWD), Crypt::Rijndael::MODE_CBC);
     }
 }
 
+sub sign {
+    my $_ = shift->_no_class;
+    my $key = new EC::DSA::PrivateKey $EC::G, $_->value;
+    $key->sign(Bitcoin::hash_int shift);
+}
+
+sub prompt {
+    my $class = shift->_no_instance;
+    system "stty -echo";
+    print "Enter your key in WIF: ";
+    my $WIF = <STDIN>; chomp $WIF;
+    print "\n";
+    system "stty echo";
+    $class->new($WIF);
+}
 
 1;
 
@@ -143,9 +186,6 @@ Bitcoin::Key, Bitcoin::Key::Secret
     7INs0AnqUgxwMyO5JL1TKOf1vP0Zbw==
     -----END EC PRIVATE KEY-----
     stop
-    my $mkey = new Bitcoin::Key::Master;
-    my $subkey = $mkey & 'account #42';
-
     print $key;
     print $key->address;
     my $secexp = $key->value;
@@ -153,10 +193,16 @@ Bitcoin::Key, Bitcoin::Key::Secret
     my $public_point = $key->public_point;
     my $public_point = exp $key;
 
-    $encrypted_key = $randomkey->encrypt('dummy password');
+    my $master_key = new Bitcoin::Key::Master;
+    my $sub_key = $master_key << 'ASCII account name';
+    my $account_name = $master_key >> $sub_key;
+
+    $encrypted_key = $ey->encrypt('dummy password');
     $decrypted_key = $encrypted_key->decrypt('dummy password');
 
     print $key1 + $key2;
+    print $key1 * $key2;
+    print $key * bless [ $x, $y ], 'EC::Point';
 
 =head1 DESCRIPTION
 
@@ -208,22 +254,10 @@ integer will be directly used as the secret exponent.
     use bigint;
     my $key = new Bitcoin::Key::Secret  256**16 + 1;
 
-=head3 Salting a previous key
+=head3 Deriving from a master key using ASCII account names
 
-You can create a key by salting a previous one with any arbitrary string.  To
-do so, the hash dereferenciation operator has been overloaded.Each fetched
-value is a blessed reference to a new Bitcoin::Key::Secret object.
-
-    my $main_key = new Bitcoin::Key::Secret;
-    my %wallet = %$main_key;
-    my $socks_key = $wallet{"savings account to buy alpaca socks"};
-    print $socks_key->address;
-
-Salting is deterministic, but also destructive: you can not retrieve the
-salting string from the salted key.  Neither can you retrieve the main key.
-
-If you create a whole wallet using this salting method, your main key becomes
-highly sensitive information and should be properly encrypted and backed up.
+It is possible to derive an infinite number of keys from a master key using ASCII string
+to differentiate them.  See L<Master keys> below.
 
 =head2 AES Encryption
 
@@ -253,17 +287,26 @@ returns the elliptic curve multiplication of the point by the key value.
 
 =head2 Master keys
 
-The class Bitcoin::Key::Master inherits from Bitcoin::Key::Secret and implements an additional '&' overloaded opperator.
-It allows creation of an arbitrary number of I<subkeys> from any identifier string.
+The class Bitcoin::Key::Master inherits from Bitcoin::Key::Secret and overloads
+'<<' and '>>' opperators.  This allows creation of I<subkeys> from
+32-bytes-longed identifier strings.  Any longer string will be truncated.
 
     my $master_key = new Bitcoin::Key::Master;
-    my $subkey = $master_key & 'some string';
+    my $subkey = $master_key << 'some string';
 
-This is a destructive process:  there is no way to retrieve the initial string from the generated key.
+The processus is not entirely destructive, so it is possible to retrieve the
+original string from the subkey, or at least the first 32 bytes.
 
+    my $account_name = $master_key >> $subkey;
+
+   
 =head2 Message signing
 
-B<TODO>
+Derefencing a key as a subroutine will perform EC::DSA signature on a
+Bitcoin::hash digest.  The result is a C<$r, $s> integer pair.  Use Crypt::ASN1
+if you need an ASN1 encoding. 
+
+    my @sig = $key->('message to be signed');
 
 =head1 AUTHOR
 

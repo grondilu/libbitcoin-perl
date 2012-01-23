@@ -18,8 +18,8 @@ use constant {
     OP_VERIFY		=> [ 103, sub { if (not my $test = Pop) { Push $test; die 'OP_VERIFY' } } ],
     OP_RETURN		=> [ 104, sub { die 'OP_RETURN' } ],
 
-    OP_TOALTSTACK   	=> [ 107, \&Bitcoin::Script::Stack::ToAlt ],
-    OP_FROMALTSTACK 	=> [ 108, \&Bitcoin::Script::Stack::FromAlt ],
+    OP_TOALTSTACK   	=> [ 107, \&Bitcoin::Script::Stack::toAlt ],
+    OP_FROMALTSTACK 	=> [ 108, \&Bitcoin::Script::Stack::fromAlt ],
     OP_DROP  		=> [ 109, \&Pop  ],
     OP_ROT   		=> [ 123, \&Rot ],
     OP_SWAP  		=> [ 124, \&Swap ],
@@ -48,7 +48,20 @@ use constant {
     OP_HASH256  	=> [ 170, sub { use Bitcoin; Push Bitcoin::hash    Pop } ],
 
     OP_CODESEPARATOR    => [ 171, sub {...} ],
-    OP_CHECKSIG		=> [ 172, sub {...} ],
+    OP_CHECKSIG		=> [ 172,
+	sub {
+	    my $stripped_tx = shift;
+	    use EC qw(secp256k1);
+	    my $pubkey = new EC::DSA::PublicKey $EC::G, bless [
+		map { hex $_ } unpack('H*', Pop) =~ /\A04([a-z\d]{64})([a-z\d]{64})\Z/
+	    ], 'EC::Point';
+	    my ($sig, $hashType) = Pop =~ /(.*)(.)\Z/ms;
+	    my @sig = map { $_->{r}, $_->{s} } decode $EC::DSA::ASN::Signature $sig;
+	    verify $pubkey
+	    Bitcoin::hash_int($stripped_tx->serialize->input . pack 'L<', ord $hashType),
+	    @sig;
+	}
+    ],
 
 };
 

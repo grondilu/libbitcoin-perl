@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# Perlectrum, an Electrum client in Perl :)
+# Electrum client in Perl
 #
 # For more info about Electrum and its original client/server in Python,
 # see git://gitorious.org/electrum/electrum.py
@@ -7,8 +7,6 @@
 # For general info about bitcoin, see http://www.bitcoin.org
 #
 package Bitcoin::Electrum::Client;
-require Exporter;
-
 use strict;
 use warnings;
 
@@ -58,12 +56,12 @@ sub raw_tx {
     for (@$output) {
 	my ($addr, $amount) = @$_;
 	my $script = pack 'C C C H40 C C',
-	Bitcoin::Script::OP_DUP,
-	Bitcoin::Script::OP_HASH160,
+	Bitcoin::Script::Codes::OP_DUP->[0],
+	Bitcoin::Script::Codes::OP_HASH160->[0],
 	0x14,
 	substr(Bitcoin::Address::new($addr)->toHex, 2, -8),
-	Bitcoin::Script::OP_EQUALVERIFY,
-	Bitcoin::Script::OP_CHECKSIG,
+	Bitcoin::Script::Codes::OP_EQUALVERIFY->[0],
+	Bitcoin::Script::Codes::OP_CHECKSIG->[0],
 	;
 	push @tx,
 	['amount',		pack 'q', $amount],

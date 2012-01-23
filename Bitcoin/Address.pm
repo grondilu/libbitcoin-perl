@@ -19,14 +19,14 @@ sub new {
     my $class = shift->_no_instance;
     my $arg = shift;
     my $version = shift;
-    if (ref($arg) eq 'EC::DSA::PublicKey')   {...}
     if (ref($arg) eq 'EC::Point')            {
 	use bigint;
 	return new $class Bitcoin::hash160(
 	    pack 'H2H64H64', '04', map +($_+2**256)->as_hex =~ s/0x1//r, @$arg[0,1]
 	), $version;
     }
-    elsif ($arg =~ m/---BEGIN [^-]* KEY---/)  { warn 'using PEM'; SUPER::new $class $class->_from_PEM($arg), $version }
+    if (ref($arg) eq 'EC::DSA::PublicKey')   { new $class $arg->[1], $version }
+    elsif ($arg =~ m/---BEGIN [^-]* KEY---/) { SUPER::new $class $class->_from_PEM($arg), $version }
     else	         		     { SUPER::new $class $arg, $version }
 }
 
@@ -43,7 +43,6 @@ sub _from_PEM {
 }
 
 1;
-
 
 __END__
 

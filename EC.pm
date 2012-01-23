@@ -11,11 +11,11 @@ use constant secp256k1 => {
     p => hex('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F'),
     b => hex('0x0000000000000000000000000000000000000000000000000000000000000007'),
     a => hex('0x0000000000000000000000000000000000000000000000000000000000000000'),
-    G => bless [
+    G => bless([
 	hex('0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798'),
 	hex('0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'),
 	hex('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141'),
-    ], 'Point'
+    ], 'Point'),
 };
 no bigint;
 
@@ -25,7 +25,7 @@ use warnings;
 use integer;
 use NumberTheory qw(inverse_mod);
 
-our ($a, $b, $p);
+our ($a, $b, $p, $G);
 
 sub Delta;
 sub check;
@@ -44,7 +44,9 @@ sub import {
     elsif (@_ == 1 and not ref $_[0]) {
 	my $curve = shift;
 	die 'unknown curve' unless exists $EC::Curves::{$curve};
-	($a, $b, $p) = map ${$EC::Curves::{$curve}}->{$_}, qw( a b p );
+	($a, $b, $p, $G) = map ${$EC::Curves::{$curve}}->{$_}, qw( a b p G );
+	$G = bless $G, 'EC::Point';
+	check $G;
     }
     else { die 'wrong import syntax' }
     die "curve parameters are not defined" unless defined $a and defined $b and defined $p;
@@ -117,15 +119,16 @@ q("") => sub {
 ;
 
 package Math::BigInt;
-no warnings 'redefine';
-use overload
-'*' => sub {
-    return ref($_[1]) eq 'EC::Point' ? $_[1]->mult($_[0]) : $_[0]->copy->bmul($_[1]);
-};
+#no warnings 'redefine';
+#use overload
+#'*' => sub {
+#    return ref($_[1]) eq 'EC::Point' ? $_[1]->mult($_[0]) : $_[0]->copy->bmul($_[1]);
+#};
 
 package EC::DSA::PublicKey;
 use strict;
 use warnings;
+use overload '&{}' => sub { my $this = shift; sub { $this->verify(@_) } };
 
 sub new {
     die "constructor's instance method call not implemented" if ref(my $class = shift);
@@ -134,13 +137,12 @@ sub new {
     die "bad order for generator" if EC::mult $n, $generator;
     bless [ map EC::check($_), $generator, $point ], $class;
 }
-sub verifies {
+sub verify {
     use bigint;
     my $this = shift;
     die "class method call not implemented" unless ref $this;
     my $n = $this->[0][2];
-    my $h = shift;
-    my ($r, $s) = @{shift()};
+    my ($h, $r, $s) = @_;
     die "out of range" if $r < 1 or $r > $n - 1 or $s < 1 or $s > $n -1;
     my $c = NumberTheory::inverse_mod($s, $n);
     my @u = map { $_*$c % $n } $h, $r;
@@ -155,28 +157,43 @@ use integer;
 
 sub new {
     die "constructor's instance method call not implemented" if ref(my $class = shift);
-    my ($public_key, $secret_multiplier) = @_;
-    die "wrong public key format" if ref($public_key) ne 'EC::DSA::PublicKey';
-    bless [ $public_key, $secret_multiplier ], $class;
+    my ($generator, $secret_multiplier) = @_;
+    die "generator should have an order" unless defined(my $n = $$generator[2]);
+    die "bad order for generator" if EC::mult $n, $generator;
+    bless [ $generator, $secret_multiplier ], $class;
 }
 sub sign {
+    use Bitcoin::Util;
     use bigint;
     my $_ = shift;
     die "class method call not implemented" unless ref;
-    my $generator = $_->[0][0];
+    my $generator = $_->[0];
     my $n = $generator->[2] // die 'unknown generator order';
-    my ($h, $random_k) = @_;
+    my $h = shift // die 'nothing to sign';
+    my $random_k = shift // Bitcoin::Util::randInt;
     my $k = $random_k % $n;
     my $p = EC::mult $k, $generator;
     my $r = $$p[0];
     die "amazingly unlucky random number r" if $r == 0;
-    my $s = (
-	NumberTheory::inverse_mod( $k, $n ) *
-	($h + ($$_[1] * $r) % $n)
-    ) % $n;
+    my $s = ( NumberTheory::inverse_mod( $k, $n ) * ($h + ($$_[1] * $r) % $n) ) % $n;
     die "amazingly unlucky random number s" if $s == 0;
-    return [ $r, $s ];
+    return $r, $s;
 }
+sub public_key {
+    my $_ = shift;
+    die "class method call not implemented" unless ref;
+    new EC::DSA::PublicKey $_->[0], EC::mult $_->[1], $_->[0];
+}
+
+package EC::DSA::ASN;
+use Convert::ASN1;
+our $Signature = new Convert::ASN1;
+prepare $Signature q(
+    SEQUENCE {
+	r INTEGER,
+	s INTEGER
+    }
+);
 
 1;
 
@@ -197,6 +214,16 @@ EC - Elliptic Curve calculations in Perl
     $point = EC::mult 7, $point;
     $point = EC::add $point, EC::double $point;
     my $point18 = 17 * $point + $point;
+
+    package EC::DSA;
+
+    my $privKey = new PrivateKey EC::Curves::secp256k1->{G}, 2**128 + 79;
+
+    use Digest::SHA qw(sha256_hex);
+    use bigint;
+
+    my $h = hex sha256_hex $privKey;
+    
 
 =head1 DESCRIPTION
 

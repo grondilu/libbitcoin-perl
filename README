@@ -1,14 +1,13 @@
 Perl implementation of the bitcoin protocol
 
-
 * bitcoin-related libraries
 * electrum client
 * elliptic curve cryptography in pure perl
 
 Requires v5.14 and beyond, at least because of an extensive use of the 'r'
-modificator in s///
+modifier in s///
 
 Requires dc, the unix desktop calculator, as it is much faster than Math::BigInt, even
 with GMP.
 
-Requires also: BerkeleyDB, Crypt::Rijndael, File::Map
+Requires also: BerkeleyDB, Convert::ASN1, Crypt::Rijndael, File::Map

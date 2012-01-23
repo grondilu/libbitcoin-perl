@@ -12,8 +12,8 @@ use overload
 sub new {
     my $class = shift; die 'instance method call not implemented' if ref $class;
     my $arg = shift;
-    if    (ref $arg)   {...}
-    elsif ($arg eq '') { bless [], $class }
+    if    (not defined $arg or $arg eq '') { bless [], $class }
+    elsif (ref $arg)                       {...}
     else {
 	my $first_atom = do {
 	    given(ord substr $arg, 0, 1) {

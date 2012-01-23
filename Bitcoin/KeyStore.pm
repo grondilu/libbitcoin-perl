@@ -1,44 +1,34 @@
 #!/usr/bin/perl -w
 package Bitcoin::KeyStore;
+@ISA = qw(Tie::Hash);
 use strict;
 use warnings;
 use Bitcoin::Address;
 use Bitcoin::Key;
-our ($cipher, $passwd);
-
-sub FETCH {
-    my $_ = shift;
-    my $addr = shift;
-    my $encrypted = bless \$_->SUPER::FETCH($addr), 'Bitcoin::Key::Secret';
-    return $encrypted->decrypt($cipher // $passwd);
-}
 
 sub STORE {
     my ($this, $key, $value) = @_;
-    my $pubkey = Bitcoin::Address->new($key);
-    my $privkey = Bitcoin::Key::Secret->new($value);
-    die "incompatible version numbers" if $privkey->version != 128 + $pubkey->version;
-    die "inconsistent entry:  key is not value's Bitcoin address" if $$pubkey ne $privkey->address->toBase58;
-    return $this->SUPER::STORE($pubkey->toBase58, $privkey->encrypt($cipher // $passwd));
+    my $address = new Bitcoin::Address     $key;
+    my $secret  = new Bitcoin::Key::Secret $value;
+    die "incompatible version numbers" if $secret->version != 128 + $address->version;
+    die "inconsistent entry" if $address ne $secret->address;
+    return SUPER::STORE $this $address->toBase58, $secret;
 }
 
 sub add {
-    my $_ = shift;
-    die "class method call not implemented" unless ref;
+    my $this = shift;
+    die "class method call not implemented" unless ref $this;
     my $arg = shift; 
-    if (ref($arg) eq 'Bitcoin::Key::Secret') {
-	my $address = $arg->address->toBase58;
-	$_->SUPER::STORE($address, $arg->encrypt($cipher // $passwd));
-	return $address;
-    }
-    else { $_->add(new Bitcoin::Key::Secret $arg) }
+    return SUPER::STORE $this $arg->address->toBase58, $arg;
 }
 
-package Bitcoin::KeyStore::Basic; 		# corresponds to CBasicKeyStore
+package Bitcoin::KeyStore::Basic; 		
+# This class corresponds to CBasicKeyStore but is merely an alias to Bitcoin::KeyStore
 our @ISA = qw(Bitcoin::KeyStore);
 
-package Bitcoin::KeyStore::Encrypted;		# corresponds to CCryptoKeyStore
-our @ISA = qw(Bitcoin::KeyStore::Basic);
+package Bitcoin::KeyStore::Encrypted;
+# This class corresponds to CCryptoKeyStore but is much more rudimentary
+our @ISA = qw(Bitcoin::KeyStore);
 
 1;
 
@@ -55,6 +45,10 @@ Bitcoin::KeyStore
 =head1 DESCRIPTION
 
 Perl implementation of bitcoin's CKeyStore virtual class.
+
+This is quite different from the vanilla C++ implementation, though.  The base
+class, Bitcoin::KeyStore, is not virtual and does not implement interprocess
+locking protection systems.
 
 =head1 AUTHOR
 

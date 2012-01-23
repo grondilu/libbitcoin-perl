@@ -26,7 +26,6 @@ use constant {
 
     DEFAULT_PORT	=>        8333,
 
-
     DUMMY_PASSWD        => 'dummy password',
 };
 
@@ -56,10 +55,12 @@ sub hash160_hex { unpack 'H*', hash160 @_ }
 
 sub hash;
 sub hash_hex;
+sub hash_int;
 {
     use Digest::SHA qw(sha256);
     sub hash     { sha256 sha256 shift }
     sub hash_hex { unpack 'H*', reverse hash shift }
+    sub hash_int { use bigint; hex unpack 'H*', hash shift }
 }
 
 1;
@@ -114,32 +115,19 @@ Only BASE58 and BTC can be exported.
 The Bitcoin module is not supposed to contain much.  Most useful stuffs are
 implemented in submodules.
 
-This section just sumarize their fonctionalities.  See their POD for details.
+This section just sumarize their fonctionalities, and several other modules
+exist but are not documented here yet.  See their POD in the source code tree.
 
-=head2 Bitcoin::Address
+=head2 Bitcoin::Database
 
-This class encapsulates a bitcoin address and allows checksum validation, version
-or format conversion.
+This class inherits from BerkeleyDB::Btree and provides default environnement
+for opening a bitcoin database used by the vanilla client.
 
-=head2 Bitcoin::PrivateKey
+=head2 Bitcoin::Base58
 
-This class inherits from C<Bitcoin::Address> and encapsulates a bitcoin private key.
-
-Its default version number is 128 instead of 0, as expected in the Wallet Import Format
-that can be obtained with the C<toWIF> method.
-
-Encryption is also supported using C<Crypt::Rijndael>.
-
-=head2 Bitcoin::Wallet
-
-This class implements a tie mechanism to store bitcoin private keys.  It 
-provides transparent entry validation and encryption in a Berkeley database.
-
-    tie my %wallet, 'Bitcoin::Wallet', '/path/to/my/wallet';
-    $wallet{$addr} = $key;
-
-It DOES NOT allow reading/writing a bitcoin wallet file as used in the official
-bitcoin client.  
+This module implements Satoshi's base58 encoding.  It also contains an abstract class
+implementing version and checksum coding used for Bitcoin addresses and private keys.
+See Bitcoin::Address and Bitcoin::Key::Secret.
 
 =head2 Bitcoin::Electrum
 
@@ -148,7 +136,7 @@ in Python.  Hopefully someday this module will be a Perl implementation of Elect
 
 =head1 SEE ALSO
 
-Bitcoin::Address, Bitcoin::PrivateKey, Bitcoin::Base58, EC, EC::DSA
+Bitcoin::CNames, Bitcoin::Address, Bitcoin::Block, Bitcoin::Transaction, Bitcoin::Base58, EC
 
 =head1 AUTHOR
 
@@ -159,6 +147,8 @@ L Grondin <grondilu@yahoo.fr>
 Most of this code is inspired from Gavin Andersen's bitcointools, ThomasV's
 Electrum project, and of course from Satoshi Nakamoto's reference
 implementation in C++.
+
+Many, many thanks to Satoshi for what he accomplished.
 
 =head1 COPYRIGHT AND LICENSE
 

@@ -4,7 +4,8 @@ package Bitcoin::Base58;
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(encode decode);
-use Bitcoin qw(BASE58);
+use Bitcoin;
+use Bitcoin::Util;
 
 use strict;
 use warnings;
@@ -12,19 +13,19 @@ use warnings;
 sub decode;
 sub encode;
 
-my %b58 = map { (BASE58)[$_] => $_ } 0 .. 57;
-my $b58 = qr/[@{[BASE58]}]/x;
+my %b58 = map { (Bitcoin::BASE58)[$_] => $_ } 0 .. 57;
+my $b58 = qr/[@{[Bitcoin::BASE58]}]/x;
 
 {
     use bigint;
     use integer;
 
     sub decode { shift =~ m/$b58\Z/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }
-    sub encode { my $_ = shift; return encode($_/58) . (BASE58)[$_%58] if $_ > 0 } 
+    sub encode { my $_ = shift; return encode($_/58) . (Bitcoin::BASE58)[$_%58] if $_ > 0 } 
 }
 
+# Virtual base class for base58-encoded data (with version number and checksum)
 package Bitcoin::Base58::Data;
-# virtual base class for base58-encoded data (with version number and checksum)
 use Digest::SHA qw(sha256);
 
 # public methods
@@ -36,9 +37,10 @@ sub value;
 sub checksum;
 sub to_base58;
 sub to_hex;
-no warnings 'once';
-*toBase58 = \&to_base58;
-*toHex    = \&to_hex;
+{ no warnings 'once';
+    *toBase58 = \&to_base58;
+    *toHex    = \&to_hex;
+}
 
 # "private" methods
 sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }
@@ -49,8 +51,8 @@ use overload fallback => 'TRUE', q("") => sub { shift->to_base58 };
 
 # definitions for non virtual methods
 sub value   { shift->_no_class->[0] }
+sub version { my $_ = shift; $_->[1] // $_->default_version }
 sub data    { pack 'H*', shift->_no_class->value->as_hex =~ s/0x//r }
-sub version { my $_ = shift; ref() ? $_->[1] // ref->default_version : $_->default_version }
 
 {
     use integer;
@@ -60,10 +62,10 @@ sub version { my $_ = shift; ref() ? $_->[1] // ref->default_version : $_->defau
 	my $class = shift->_no_instance;
 	my $arg = shift;
 	my $version = shift;
-	if (ref($arg) eq 'Math::BigInt') { bless [ $arg, $version ], $class }
+	if (ref($arg) eq 'Math::BigInt') { bless [ $arg % 2**$class->size, $version ], $class }
 	elsif (ref($arg) eq $class) { return new $class $arg->value, $version // $arg->version }
-	elsif ($arg =~ s,(?:0x)?([0-9a-f]{@{[$class->size/4]}}),$1,) { new $class pack('H*', $arg), $version }
-	elsif ($arg =~ m/^[@{[Bitcoin::BASE58]}]+$/i)		{
+	elsif ($arg =~ s,(?:0x)?([0-9a-f]{@{[$class->size/4]}}),$1,) { new $class hex($arg), $version }
+	elsif ($arg =~ m/\A[@{[Bitcoin::BASE58]}]+\Z/i)	{
 	    my $new = bless [
 		map { $_ / 256**4 % 2**$class->size, $_ / 256**4 / 2**$class->size }
 		Bitcoin::Base58::decode $arg
@@ -71,16 +73,17 @@ sub version { my $_ = shift; ref() ? $_->[1] // ref->default_version : $_->defau
 	    die 'wrong checksum' if $new->checksum != Bitcoin::Base58::decode($arg) % 256**4;
 	    return $new;
 	}
+	#else  { new $class Bitcoin::Util::btoi($arg), $version }
 	else  {
-	    die 'argument is too big' if length(unpack 'b*', $arg) > $class->size;
-	    new $class hex(unpack 'H*', $arg), $version;
+	    warn 'argument must be truncated' if length(unpack 'b*', $arg) > $class->size;
+	    new $class hex(unpack 'H'. $class->size * 2, $arg), $version;
 	}
     }
 
     sub checksum {
 	my $_ = shift;
 	return ref() ? ref->checksum( $_->version()*2**$_->size + $_->value ) :
-	hex unpack 'H8', sha256 sha256 pack 'H*',
+	hex unpack 'H8', Bitcoin::hash pack 'H*',
 	((0x100*2**$_->size + shift)->as_hex =~ s/0x1//r);
     }
 

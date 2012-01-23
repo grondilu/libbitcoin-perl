@@ -1,24 +1,21 @@
 #!/usr/bin/perl -w
 package Bitcoin::Electrum;
+use Bitcoin;
 use strict;
 
-use constant COMMANDS => qw(
-help validateaddress balance contacts create payto sendtx password newaddress
-addresses history label gui mktxseedt2
-);
-
-use constant DEFAULT => {
-    SERVERS => [ qw(
+use constant SERVERS => qw(
     ecdsa.org
     electrum.novit.ro
-    ) ],
+);
+
+use constant {
+    DATA_DIR => Bitcoin::DATA_DIR . '/electrum/',
     PORT => 50000,
     FEE => 0.005,
-};
+}
+;
 
-our @server = @{DEFAULT->{SERVERS}};
-our $port = DEFAULT->{PORT};
-our $fee = DEFAULT->{FEE};
+mkdir DATA_DIR or die $! unless -d DATA_DIR;
 
 # Electrum server communicates with clients using python syntax (sic),
 # so we'll use home made translators, using JSON as a bridge.

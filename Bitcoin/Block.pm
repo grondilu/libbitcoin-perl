@@ -3,7 +3,7 @@ use Bitcoin;
 use Bitcoin::Database;
 
 package Bitcoin::Block;
-our @ISA = qw(Bitcoin::Block::HEADER);  # see below
+our @ISA = qw(Bitcoin::Block::Header);  # see below
 use strict;
 use warnings;
 
@@ -59,30 +59,32 @@ sub get_hash { my $this = shift->_no_class; Bitcoin::hash $this->SUPER::serializ
 sub Merkle_tree {
     # This is a straightforward translation of Satoshi's code
     my $this = shift->_no_class;
-    my @MerkleTree;
+    my @tree;
     my @transactions = @{$this->{transactions}};
-    push @MerkleTree, $_->get_hash for @transactions;
+    push @tree, $_->get_hash for @transactions;
     for( my $j = 0, my $size = @transactions; $size > 1; $size = int( ($size + 1) / 2 ) ) {
 	for ( my $i = 0; $i < $size; $i += 2 ) {
 	    my $i2 = $i + 1 < $size - 1 ? $i + 1 : $size - 1;
-	    push @MerkleTree, Bitcoin::hash $MerkleTree[$j + $i] . $MerkleTree[$j + $i2];
+	    push @tree, Bitcoin::hash $tree[$j + $i] . $tree[$j + $i2];
 	}
 	$j += $size;
     }
-    return @MerkleTree;
+    return @tree;
 }
 
-package Bitcoin::Block::HEADER;
+package Bitcoin::Block::Header;
 
 use Bitcoin::DataStream qw(:types);
 use Bitcoin::Transaction;
 
-use overload '""' => sub {
+use overload
+'""' => sub {
     my $_ = shift;
     sprintf 'Bitcoin block created on %s: %s',
     qx(date -Rd \@$_->{nTime}) =~ s/\n//r,
     unpack 'H*', reverse $_->get_hash;
-};
+},
+;
 
 sub _no_class;
 sub _no_instance;
@@ -133,6 +135,20 @@ sub new {
 
 sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }
 sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }
+
+sub copy {
+    my $this = shift->_no_class;
+    ref($this)->new($this->serialize);
+}
+
+sub previous {
+    my $this = shift->_no_class;
+    my $n = shift // 1;
+    die 'negative argument' if $n < 0;
+    return
+    $n == 0 ? $this :
+    ref($this)->new($this->{hashPrev})->previous(--$n);
+}
 
 sub serialize {
     my $this = shift->_no_class;
