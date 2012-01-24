@@ -39,7 +39,7 @@ use constant {
     OP_ROLL  		=> [ 122, \&Bitcoin::Script::Stack::Roll ],
 
     OP_EQUAL		=> [ 135, sub { Push +(Pop eq Pop) ? 1 : 0 } ],
-    OP_EQUALVERIFY	=> [ 136, sub { if (Pop eq Pop) { Push 0; die 'OP_EQUALVERIFY' } } ],
+    OP_EQUALVERIFY	=> [ 136, sub { if (Pop ne Pop) { Push 0; die 'OP_EQUALVERIFY' } } ],
 
     OP_RIPEMD160	=> [ 166, sub { Push qx/perl -e 'print pack "b*", '@{[unpack 'b*', Pop]}' | openssl dgst -rmd160 -binary/ } ],
     OP_SHA1     	=> [ 167, sub { use Digest::SHA qw(sha1);   Push sha1 Pop } ],
