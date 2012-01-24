@@ -50,6 +50,7 @@ use constant {
     OP_CODESEPARATOR    => [ 171, sub {...} ],
     OP_CHECKSIG		=> [ 172,
 	sub {
+	    use bigint;
 	    my $stripped_tx = shift;
 	    use EC qw(secp256k1);
 	    my $pubkey = new EC::DSA::PublicKey $EC::G, bless [
@@ -57,7 +58,9 @@ use constant {
 	    ], 'EC::Point';
 	    my ($sig, $hashType) = Pop =~ /(.*)(.)\Z/ms;
 	    my @sig = map { $_->{r}, $_->{s} } decode $EC::DSA::ASN::Signature $sig;
-	    ...
+	    verify $pubkey
+	    Bitcoin::hash_int($stripped_tx->serialize->input . pack 'L<', ord $hashType),
+	    @sig;
 	}
     ],
 

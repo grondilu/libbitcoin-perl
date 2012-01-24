@@ -6,7 +6,7 @@ use warnings;
 
 use overload
 '<<'	=> sub { bless [ @{$_[0]}, @{$_[1]} ] },
-'&{}'	=> sub { my $this = shift; sub { $_->() for @$this } },
+'&{}'	=> sub { my $this = shift; sub { $_->(@_) for @$this } },
 ;
 
 sub new {
@@ -37,7 +37,7 @@ our @ISA = qw(Bitcoin::Script);
 require Bitcoin::Script::Codes;
 use overload
 q(@{})	=> sub { [ shift ] },
-q(&{})	=> sub {...},
+q(&{})	=> sub { my $op_code = shift->{op_code}; ${$Bitcoin::Script::Codes::{$op_code}}->[1] },
 ;
 
 sub new {

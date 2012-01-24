@@ -50,7 +50,9 @@ use constant {
     OP_CODESEPARATOR    => [ 171, sub {...} ],
     OP_CHECKSIG		=> [ 172,
 	sub {
+	    use bigint;
 	    my $stripped_tx = shift;
+	    die 'undefined argument' unless defined $stripped_tx;
 	    use EC qw(secp256k1);
 	    my $pubkey = new EC::DSA::PublicKey $EC::G, bless [
 		map { hex $_ } unpack('H*', Pop) =~ /\A04([a-z\d]{64})([a-z\d]{64})\Z/
