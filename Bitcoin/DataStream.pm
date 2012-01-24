@@ -125,12 +125,12 @@ sub read_compact_size {
 
 sub write_compact_size {
     my $_ = shift->_no_class;
-    my $size = shift;
-    if    ($size < 0)   { die "negative size" }
-    elsif ($size < 253) { $_->{input} .= chr($size); }
-    elsif ($size < 254) { $_->{input} .= "\xfd" . pack UINT16, shift }
-    elsif ($size < 255) { $_->{input} .= "\xfe" . pack UINT32, shift }
-    else                { $_->{input} .= "\xff" . pack UINT64, shift }
+    my $size = shift // die 'undefined size';
+    if    ($size < 0)     { die "negative size" }
+    elsif ($size < 253)   { $_->{input} .= chr($size); }
+    elsif ($size < 2**16) { $_->{input} .= chr(253) . pack UINT16, $size }
+    elsif ($size < 2**32) { $_->{input} .= chr(254) . pack UINT32, $size }
+    else                  { $_->{input} .= chr(255) . pack UINT64, $size }
 }
 
 sub calc_size {
