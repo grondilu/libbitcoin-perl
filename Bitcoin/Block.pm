@@ -22,7 +22,7 @@ sub new {
 	    $this->{merkleTx} = $merkle_tx;
 	}
 
-	$this->{transactions} = [ map { new Bitcoin::Transaction $arg } 1 .. $arg->read_compact_size ];
+	$this->{transactions} = [ map { Bitcoin::Transaction->new($arg) } 1 .. $arg->read_compact_size ];
 
 	die "Merkle's tree root verification failed"
 	if pack('H*', $this->{hashMerkleRoot}) ne reverse +($this->Merkle_tree)[-1];

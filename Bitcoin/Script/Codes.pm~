@@ -51,16 +51,17 @@ use constant {
     OP_CHECKSIG		=> [ 172,
 	sub {
 	    use bigint;
-	    my $stripped_tx = shift;
 	    use EC qw(secp256k1);
-	    my $pubkey = new EC::DSA::PublicKey $EC::G, bless [
-		map { hex $_ } unpack('H*', Pop) =~ /\A04([a-z\d]{64})([a-z\d]{64})\Z/
-	    ], 'EC::Point';
+	    my $stripped_tx = shift;
+	    my $pubkey = Pop =~ /\A\x{04}(.{32})(.{32})\Z/ms ?
+		new EC::DSA::PublicKey $EC::G, bless [ map { hex unpack 'H*' } $1, $2 ], 'EC::Point'
+	    : die 'could not extract public key';
 	    my ($sig, $hashType) = Pop =~ /(.*)(.)\Z/ms;
 	    my @sig = map { $_->{r}, $_->{s} } decode $EC::DSA::ASN::Signature $sig;
 	    verify $pubkey
 	    Bitcoin::hash_int($stripped_tx->serialize->input . pack 'L<', ord $hashType),
 	    @sig;
+	    Push 1;
 	}
     ],
 
