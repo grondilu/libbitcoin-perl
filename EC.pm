@@ -83,6 +83,7 @@ sub add {
     return bless [ map { $_ % $p } $x, $l*($$u[0] - $x) - $$u[1] ], 'EC::Point';
 }
 sub mult {
+    no warnings qw(recursion);
     my $k = shift;
     my $u = shift;
     return
