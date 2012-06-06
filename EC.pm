@@ -83,22 +83,22 @@ sub add {
     return bless [ map { $_ % $p } $x, $l*($$u[0] - $x) - $$u[1] ], 'EC::Point';
 }
 sub mult {
-    no warnings qw(recursion);
     my $k = shift;
-    my $u = shift;
-    return
-    $k == 1   ? $u :
-    $k == 2   ? double $u :
-    $k%2 == 0 ? double mult $k/2, $u :
-    add $u, double mult $k/2, $u
-    ;
+    my $point = shift->clone;
+    my $result = EC::Point->horizon;
+    for (; $k > 0; $point = double($point), $k /= 2) {
+	$result += $point if $k%2 == 1;
+    }
+    return $result;
 }
 
 no bigint;
 
 package EC::Point;
+sub horizon { bless [], shift }
+sub clone { my $this = shift; bless [ @$this ], ref $this }
 use overload
-'+' => sub { $_[0]->add($_[1]) },
+'+' => sub { EC::add($_[0], $_[1]) },
 '*' => sub { EC::mult($_[2] ? @_[0,1] : @_[1,0]) },
 q("") => sub {
     my $_ = shift;
