@@ -76,7 +76,11 @@ sub add {
     die "$@ in add" if $@;
     return $u unless @$v;
     return $v unless @$u;
-    return +($$u[1] + $$v[1]) % $p == 0 ? bless [], 'EC::Point' : double $u if $$u[0] % $p == $$v[0] % $p;
+    if ($$u[0] % $p == $$v[0] % $p) {
+	return +($$u[1] + $$v[1]) % $p == 0 ?
+	bless [], 'EC::Point' :
+	double $u
+    }
     my $i = inverse_mod($$v[0] - $$u[0], $p);
     my $l = ($$v[1] - $$u[1]) * $i % $p;
     my $x = $l**2 - $$u[0] - $$v[0];
@@ -99,7 +103,7 @@ sub horizon { bless [], shift }
 sub clone { my $this = shift; bless [ @$this ], ref $this }
 use overload
 '+' => sub { EC::add($_[0], $_[1]) },
-'*' => sub { EC::mult($_[2] ? @_[0,1] : @_[1,0]) },
+'*' => sub { EC::mult($_[2] ? @_[1,0] : @_[0,1]) },
 q("") => sub {
     my $_ = shift;
     return @$_ ?
