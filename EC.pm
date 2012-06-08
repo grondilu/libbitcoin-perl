@@ -1,11 +1,14 @@
 #!/usr/bin/perl
 # elliptic curve cryptography in Perl
-package EC::Curves;
 use strict;
 use warnings;
+use bigint; # try => 'GMP';
+use integer;
+
+
+package EC::Curves;
 
 # secp256k1, http://www.oid-info.com/get/1.3.132.0.10
-use bigint; # try => 'GMP';
 use constant secp256k1 => {
     p => hex('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F'),
     b => hex('0x0000000000000000000000000000000000000000000000000000000000000007'),
@@ -18,9 +21,6 @@ use constant secp256k1 => {
 };
 
 package EC;
-use strict;
-use warnings;
-use integer;
 use NumberTheory qw(inverse_mod);
 
 our ($a, $b, $p, $G);
@@ -96,8 +96,6 @@ sub mult {
     return $result;
 }
 
-no bigint;
-
 package EC::Point;
 sub horizon { bless [], shift }
 sub clone { my $this = shift; bless [ @$this ], ref $this }
@@ -113,12 +111,12 @@ q("") => sub {
 'bool' => sub { my $_ = shift; @$_ > 0 },
 ;
 
-#package Math::BigInt;
-#no warnings 'redefine';
-#use overload
-#'*' => sub {
-#    return ref($_[1]) eq 'EC::Point' ? $_[1]->mult($_[0]) : $_[0]->copy->bmul($_[1]);
-#};
+package Math::BigInt;
+no overload '*';
+use overload
+'*' => sub {
+    return ref($_[1]) eq 'EC::Point' ? EC::mult($_[0], $_[1]) : $_[0]->copy->bmul($_[1]);
+};
 
 package EC::DSA::PublicKey;
 use strict;
@@ -133,7 +131,6 @@ sub new {
     bless [ map EC::check($_), $generator, $point ], $class;
 }
 sub verify {
-    use bigint;
     my $this = shift;
     die "class method call not implemented" unless ref $this;
     my $n = $this->[0][2];
@@ -159,7 +156,6 @@ sub new {
 }
 sub sign {
     use Bitcoin::Util;
-    use bigint;
     my $_ = shift;
     die "class method call not implemented" unless ref;
     my $generator = $_->[0];
@@ -215,8 +211,6 @@ EC - Elliptic Curve calculations in Perl
     my $privKey = new PrivateKey EC::Curves::secp256k1->{G}, 2**128 + 79;
 
     use Digest::SHA qw(sha256_hex);
-    use bigint;
-
     my $h = hex sha256_hex $privKey;
     
 
