@@ -1,31 +1,21 @@
 use Test;
-BEGIN { plan tests => 40 }
+BEGIN { plan tests => 10 }
 
 use strict;
 use v5.14;
 
-use Bitcoin::Key;
-use Bitcoin::Util;
-use Bitcoin::Address;
+use Bitcoin;
+use Bitcoin::Digest;
 
+my $i;
 for (<DATA>) {
     next if /^#/;
     chomp;
     my ($i, $addr, $key) = split ',';
 
-    $key = new Bitcoin::Key::Secret $key;
-    ok( $key->address, $addr, "failed to convert WIF to bitcoin Address" );
-
-    my $before = $key->value;
-    $key->encrypt('pass');
-    ok( $key->decrypt('pass')->value, $before, 'inconsistent encryption/decryption' );
+    my $k = new Bitcoin::Key $key;
+    ok( $k->address->toBase58, $addr, "failed to convert WIF to bitcoin Address" );
 }
-
-my $k = new Bitcoin::Key::Secret;
-my $text = map { chr rand 256 } 1 .. 32;
-eval { $k->public_key(Bitcoin::hash_int($text), $k->($text)) };
-
-ok $@, '';
 
 __DATA__
 # The following keys were created using javascript code on bitaddress.org
