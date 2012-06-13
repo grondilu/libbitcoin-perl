@@ -89,10 +89,12 @@ sub new {
 	    $this->{text} = $_;
 	    return bless $this, $class.'::ASCII';
 	}
-	elsif (/\A\x{04}.{64}+\Z/ms)    {
-	    use Bitcoin::Address;
+	elsif (/\A\x{04}(?<x>.{32})(?<y>.{32})\Z/ms)    {
+	    use Bitcoin;
 	    use bigint;
-	    $this->{address} = ''. new Bitcoin::Address Bitcoin::hash160 $_;
+	    $this->{address} = Bitcoin::Address->new(
+		bless { map { $_ => hex unpack 'H*', $+{$_} } qw(x y) }, 'EC::DSA::PublicKey'
+	    );
 	    return bless $this, $class.'::PublicKey';
 	}
 	else {

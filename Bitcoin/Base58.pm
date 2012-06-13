@@ -19,7 +19,7 @@ our @b58 = qw{
     a b c d e f g h i j k   m n o p q r s t u v w x y z
 };
 our %b58 = map { $b58[$_] => $_ } 0 .. 57;
-our $b58 = qr/[@b58]/x;
+our $b58 = qr/[@{[join '', @b58]}]/x;
 
 {
     use bigint;
@@ -63,13 +63,16 @@ use overload q("") => sub { shift->to_base58 };
     use bigint;
 
     sub value {
-	my $this = shift->_no_class;
-	return hex unpack "H*", $this->data;
+	my $this = shift;
+	if(ref $this) { return ref($this)->value($this->data) }
+	else { return hex unpack "H*", shift }
     }
 
     sub data  {
-	my $this = shift->_no_class;
-	return pack 'H*', (2**$this->size+$this->value)->as_hex =~ s/0x1//r;
+	my $this = shift;
+	my $value = ref $this ? $this->value : shift;
+	if(ref $this) { return ref($this)->data($this->value) }
+	else { return pack 'H*', (2**$this->size+$value)->as_hex =~ s/0x1//r }
     }
 
     sub value_from_address {
@@ -84,14 +87,14 @@ use overload q("") => sub { shift->to_base58 };
 	return hex unpack 'H8', Bitcoin::Digest::hash256_bin pack 'H*',
 	sprintf "%02X%s",
 	$this->version,
-	unpack("H*", $this->data);
+	uc unpack "H*", $this->data;
     }
 
     sub to_hex {
 	my $this = shift->_no_class;
 	return sprintf "%02X%s%08X",
 	$this->version,
-	unpack("H*", $this->data),
+	uc(unpack "H*", $this->data),
 	$this->checksum;
     }
 

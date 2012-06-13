@@ -44,8 +44,8 @@ use constant {
     OP_RIPEMD160	=> [ 166, sub { Push qx/perl -e 'print pack "b*", '@{[unpack 'b*', Pop]}' | openssl dgst -rmd160 -binary/ } ],
     OP_SHA1     	=> [ 167, sub { use Digest::SHA qw(sha1);   Push sha1 Pop } ],
     OP_SHA256   	=> [ 168, sub { use Digest::SHA qw(sha256); Push sha256 Pop } ],
-    OP_HASH160  	=> [ 169, sub { use Bitcoin; Push Bitcoin::hash160 Pop } ],
-    OP_HASH256  	=> [ 170, sub { use Bitcoin; Push Bitcoin::hash    Pop } ],
+    OP_HASH160  	=> [ 169, sub { use Bitcoin::Digest; Push Bitcoin::Digest::hash160_bin Pop } ],
+    OP_HASH256  	=> [ 170, sub { use Bitcoin::Digest; Push Bitcoin::Digest::hash256_bin Pop } ],
 
     OP_CODESEPARATOR    => [ 171, sub {...} ],
     OP_CHECKSIG		=> [ 172,
