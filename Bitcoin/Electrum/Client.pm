@@ -26,7 +26,8 @@ use Digest::SHA qw(sha256 sha512);
 #
 
 sub raw_tx {
-    my ($input, $output) = @_;
+    my $self = shift;
+    my ($input, $output) = @_[0, 1];
     my $for_sig = shift;
 
     my @tx;
@@ -76,12 +77,14 @@ sub raw_tx {
 }
 
 sub mktx {
+    my $self = shift;
     my $to_address = shift;
     my $amount = shift;
     ...
 }
 
 sub request {
+    my $self = shift;
     my $command = shift;
     my $response;
     if ($Bitcoin::Electrum::port =~ /80|8080|443/) {

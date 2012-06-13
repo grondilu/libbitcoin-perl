@@ -1,64 +1,56 @@
 #!/usr/bin/perl -w
-use Bitcoin;
-use Bitcoin::Database;
+use Bitcoin::Digest;
 
 package Bitcoin::Block;
-our @ISA = qw(Bitcoin::Block::Header);  # see below
+use IO::Uncompress::Bunzip2;
 use strict;
 use warnings;
+use overload '""' => sub { use YAML; Dump shift };
+
+use IO::Uncompress::Bunzip2 qw($Bunzip2Error);
+my $z = new IO::Uncompress::Bunzip2 "bitcoin-blocks.bz2"
+    or die $Bunzip2Error;
 
 sub new {
-    my $class = shift->_no_instance;
+    my $class = shift;
     my $arg = $_[0];
     if (ref $arg eq 'Bitcoin::DataStream') {
-	my $this = SUPER::new $class $arg;
-
-	if (not defined($ENV{BITCOIN_TEST}) and $this->{version} & (1 << 8)) {
-	    use Bitcoin::DataStream qw(INT32 BYTE);
-	    my $merkle_tx = new Bitcoin::Transaction $arg;
-	    $merkle_tx->{chainMerkleBranch} = $arg->Read(BYTE . 32*$arg->read_compact_size);
-	    $merkle_tx->{chainIndex} = $arg->Read(INT32);
-	    $merkle_tx->{parentBlock} = SUPER::new $class $arg;
-	    $this->{merkleTx} = $merkle_tx;
-	}
-
-	$this->{transactions} = [ map { Bitcoin::Transaction->new($arg) } 1 .. $arg->read_compact_size ];
-
+	bless my $this = {}, $class;
+	$this->{header} = new Bitcoin::Block::Header $arg;
+	$this->{transactions} = [
+	    map { Bitcoin::Transaction->new($arg) } 1 .. $arg->read_compact_size
+	];
 	die "Merkle's tree root verification failed"
-	if pack('H*', $this->{hashMerkleRoot}) ne reverse +($this->Merkle_tree)[-1];
-
+	if $this->header->hashMerkleRoot ne +($this->Merkle_tree)[-1];
 	return $this;
     }
-    else { return SUPER::new $class @_ }
-}
-
-sub unbless {
-    my $this = shift;
-    +{
-	map {
-	$_ => $_ eq 'transactions' ?
-	[ map { $_->unbless } @{$this->{$_}} ] :
-	$this->{$_}
-	} keys %$this
+    elsif( uc $arg =~ /^\A[[:xdigit:]]{10,}\Z/ ) {
+	$class->new(Bitcoin::DataStream->new(pack 'H*', $arg));
     }
+    elsif( $arg < 100_000 ) {
+	my @line = <$z>;
+	$class->new($line[$arg]);
+    }
+    else { die 'unknown argument type' }
 }
 
+sub header { shift->{header} }
+sub transactions { shift->{transactions} }
 sub serialize {
     use Bitcoin::DataStream;
-    my $this = shift->_no_class;
+    my $this = shift;
     my $stream = new Bitcoin::DataStream;
-    Write $stream SUPER::serialize $this;
-    Write $stream $this->{version} & (1 << 8) ? do {...} : '';
+    Write $stream $this->header->serialize;
     my @transactions = @{$this->{transactions}};
     write_compact_size $stream scalar @transactions;
     Write $stream $_->serialize->input for @transactions;
     return $stream;
 }
-sub get_hash { my $this = shift->_no_class; Bitcoin::Digest::hash256_bin $this->SUPER::serialize }
+sub get_hash { shift->header->get_hash }
 
 sub Merkle_tree {
     # This is a straightforward translation of Satoshi's code
-    my $this = shift->_no_class;
+    my $this = shift;
     my @tree;
     my @transactions = @{$this->{transactions}};
     push @tree, $_->get_hash for @transactions;
@@ -73,21 +65,18 @@ sub Merkle_tree {
 }
 
 package Bitcoin::Block::Header;
-
 use Bitcoin::DataStream qw(:types);
 use Bitcoin::Transaction;
 
-use overload
-'""' => sub {
-    my $_ = shift;
-    sprintf 'Bitcoin block created on %s: %s',
-    qx(date -Rd \@$_->{nTime}) =~ s/\n//r,
-    unpack 'H*', reverse $_->get_hash;
-},
-;
-
 sub _no_class;
 sub _no_instance;
+
+sub version		{ shift->_no_class->{version}        // die 'undefined version' }
+sub hashPrev		{ shift->_no_class->{hashPrev}       // die 'undefined hashPrev' }
+sub hashMerkleRoot	{ shift->_no_class->{hashMerkleRoot} // die 'undefined hashMerkleRoot' }
+sub nTime		{ shift->_no_class->{nTime}          // die 'undefined nTime' }
+sub nBits		{ shift->_no_class->{nBits}          // die 'undefined nBits' }
+sub nNonce		{ shift->_no_class->{nNonce}         // die 'undefined nNonce' }
 
 sub new {
     my $class = shift->_no_instance;
@@ -95,42 +84,16 @@ sub new {
     if (ref $arg eq 'Bitcoin::DataStream') {
 	return bless({
 		version        => $arg->Read(INT32),
-		hashPrev       => unpack('H*', reverse $arg->Read(BYTE . 32)),
-		hashMerkleRoot => unpack('H*', reverse $arg->Read(BYTE . 32)),
+		hashPrev       => $arg->Read(BYTE . 32),
+		hashMerkleRoot => $arg->Read(BYTE . 32),
 		nTime          => $arg->Read(UINT32),
 		nBits          => $arg->Read(UINT32),
 		nNonce         => $arg->Read(UINT32),
 	    }, $class)->check_proof_of_work;
     }
-    elsif (ref $arg ~~ [ qw(HASH Regexp) ]) {
-	my $index = new Bitcoin::Disk::Block::Index $arg;
-	my @result = map { new $class $_ } keys %$index;
-	return @result;
+    elsif ( ref $arg eq 'HASH' ) {
+	return bless($arg, $class)->check_proof_of_work;
     }
-    elsif ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) {
-	my $index = new Bitcoin::Disk::Block::Index $arg;
-	return new $class Bitcoin::DataStream->new->map_file(
-	    sprintf('%s/blk%04d.dat', $Bitcoin::data_dir, $index->{$arg}{nFile}),
-	    $index->{$arg}{nBlockPos})
-    }
-    elsif ($arg =~ /^\d+$/)        {
-	use Bitcoin::Constants;
-	my @preceding_checkpoint =
-	    sort { $a->{nHeight} <=> $b->{nHeight} } 
-	    grep { $_->{nHeight} <= $arg }
-	    map eval { Bitcoin::Disk::Block::Index->new($_)->{$_} },
-	    Bitcoin::Constants::GENESIS, keys %{+Bitcoin::Constants::CHECKPOINTS};
-	my $indexed_block = pop @preceding_checkpoint;
-	my $hash = Bitcoin::Constants::GENESIS;
-	die 'could not find indexed block' unless defined $indexed_block;
-	while ($indexed_block->{nHeight} < $arg) {
-	    $hash = unpack 'H*', reverse $indexed_block->{hashNext} // die 'reached block chain end';
-	    $indexed_block = Bitcoin::Disk::Block::Index->new($hash)->{$hash};
-	}
-	return new $class $hash if $indexed_block->{nHeight} == $arg;
-	die 'no such block';
-    }
-    elsif (@_ > 1 and @_ % 2 == 0) { new $class +{ @_ } }
     elsif ( not defined ref $arg ) { new $class new Bitcoin::DataStream $arg }
     else { die "wrong argument format" }
 }
@@ -154,15 +117,8 @@ sub previous {
 
 sub serialize {
     my $this = shift->_no_class;
-    pack
-    INT32  .
-    'a32a32' .
-    UINT32 .
-    UINT32 .
-    UINT32 ,
-    $this->{version},
-    ( map { scalar reverse pack 'H64', $this->{$_} } qw(hashPrev hashMerkleRoot) ),
-    map $this->{$_}, qw(nTime nBits nNonce);
+    pack join('', INT32, 'a32a32', UINT32, UINT32, UINT32),
+    map $this->{$_}, qw(version hashPrev hashMerkleRoot nTime nBits nNonce);
 }
 
 sub get_hash { my $this = shift->_no_class; Bitcoin::Digest::hash256_bin $this->serialize }
@@ -176,8 +132,6 @@ sub target {
 }
 
 sub work { 64 - log(shift->target)/log(16) }
-
-
 sub check_proof_of_work {
     my $_ = shift;
     if (ref) { ref->check_proof_of_work($_->get_hash_hex, $_->{nBits}); return $_ }
@@ -189,34 +143,6 @@ sub check_proof_of_work {
 	die "hash doesn't match nBits" if $target < hex $hash_hex;
     }
 }
-
-package Bitcoin::Block::Index;   # aka CBlockIndex
-
-sub new {
-    my $class = shift; die 'instance method call not implemented for this class' if ref $class;
-    my $arg = shift;
-    if    (ref $arg eq 'Bitcoin::Block')      {...}
-    elsif (ref $arg eq 'Bitcoin::DataStream') {
-	use Bitcoin::DataStream qw(:types);
-	return bless {
-	    version   => $arg->Read(INT32),
-	    hashNext  => $arg->Read(BYTE . 32),
-	    nFile     => $arg->Read(UINT32),
-	    nBlockPos => $arg->Read(UINT32),
-            nHeight   => $arg->Read(INT32),
-	}, $class;
-    }
-    else {...}
-}
-
-package Bitcoin::Disk::Block::Index;  # aka CDiskBlockIndex
-our @ISA = qw(Bitcoin::Disk::Index);
-sub prefix()         { 'blockindex' }
-sub indexed_object() { 'Bitcoin::Block::Index' }
-sub filename()       { 'blkindex.dat' }
-
-package Bitcoin::Block::Locator;
-# TODO
 
 1;
 
@@ -243,7 +169,6 @@ Bitcoin::Block
     # Full dump (using YAML for instance)
     use YAML;
     print +Dump $block;
-    print +Dump unbless $block;
 
     print unpack 'H*', serialize $block;
 

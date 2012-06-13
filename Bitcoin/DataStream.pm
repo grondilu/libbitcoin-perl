@@ -125,7 +125,7 @@ sub read_compact_size {
 
 sub write_compact_size {
     my $_ = shift->_no_class;
-    my $size = shift // die 'undefined size';
+    my $size = int(shift // die 'undefined size');
     if    ($size < 0)     { die "negative size" }
     elsif ($size < 253)   { $_->{input} .= chr($size); }
     elsif ($size < 2**16) { $_->{input} .= chr(253) . pack UINT16, $size }

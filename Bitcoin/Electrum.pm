@@ -12,6 +12,15 @@ use constant {
     DATA_DIR => Bitcoin::DATA_DIR . '/electrum/',
     PORT => 50000,
     FEE => 0.005,
+    KNOWN_COMMANDS => [ qw(
+	help validateaddress balance contacts create restore payto sendtx
+	password addresses history label
+	mktxseedimportsignmessageverifymessageeval
+	) ],
+    OFFLINE_COMMANDS => [ qw(
+	password mktx history label contacts help validateaddress signmessage
+	verifymessage eval create addresses import seed
+	) ],
 }
 ;
 

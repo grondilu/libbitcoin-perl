@@ -1,9 +1,10 @@
+#!/usr/bin/perl
 use strict;
 use warnings;
 use bigint;
 
 package EC::DSA;
-require EC;
+use EC;
 
 # EC::DSA should import the same things as EC
 sub import { EC::import(@_) }
@@ -26,6 +27,26 @@ sub verify {
     my $xy = $u[0] * $EC::G  +  $u[1] * $this;
     die "wrong signature" unless $xy->x % $n == $r;
 }
+sub serialize { 
+    my $this = shift;
+    return pack 'H2H*H*',
+    '04', map { uc $_->badd(2**256)->as_hex =~ s/0x1//r } $this->x, $this->y;
+}
+
+package EC::DSA::PublicKey::UnCompressed;
+our @ISA = qw(EC::DSA::PublicKey);
+
+package EC::DSA::PublicKey::Compressed;
+our @ISA = qw(EC::DSA::PublicKey);
+sub serialize { 
+    my $this = shift;
+    # WARNING:
+    # I'm not sure about that.  Just guessing.
+    return pack 'H2H*H2',
+    '03', map { uc (2**256+$_->x)->as_hex =~ s/0x1//r } $this->x, $this->y > 2**255 ? 1 : 0;
+}
+
+
 
 package EC::DSA::PrivateKey;
 require Math::BigInt;
@@ -53,6 +74,31 @@ sub public_key {
     die "class method call not implemented" unless ref $this;
     return bless $this * $EC::G, 'EC::DSA::PublicKey';
 }
+sub random {
+    my $this = shift;
+    my $i = 0;
+    $i = 256*$i + int rand 256 for 1..32;
+    $this->new($i);
+}
+
+# Elliptic curve DSA private keys should obey modular arithmetics
+no overload qw(* + - /);
+use overload
+'+'	=>	sub { $_[0]->copy()->badd($_[1])->bmod($EC::G->{order}); },
+'*'	=>	sub {
+    my ($self, $other) = @_[$_[2] ? (1,0) : (0, 1)];
+    return
+    $other->isa('EC::Point') ?
+    EC::mult($self, $other) :
+    $self->copy()->bmul($other)->bmod($EC::G->{order}) ;
+},
+'-'	=>	sub { $_[0]->copy()->bsub($_[1])->bmod($EC::G->{order}); },
+'/'	=>	sub { 
+   return $_[2] ?
+   ref($_[0])->new($_[1])->bmul($_[0]->copy->bmodinv($EC::G->{order})) :
+   $_[0]->copy->bmul($_[1]->copy->bmodinv($EC::G->{order}));
+  }, 
+;
 
 package EC::DSA::ASN;
 use Convert::ASN1;
@@ -73,6 +119,8 @@ __END__
     use EC::DSA q(secp256k1);
 
     my $privkey = new EC::DSA::PrivateKey  584738912309;
+    my $privkey = random EC::DSA::Privatekey;
+    my $pubkey  = $privkey->public_key;
     my ($r, $s) = $privkey->sign($some_message_digest_as_an_integer);
 
     my $pubkey = $privkey->public_key;

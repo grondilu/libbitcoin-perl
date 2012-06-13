@@ -1,30 +1,45 @@
 #!/usr/bin/perl -w
-package Bitcoin::KeyStore;
-@ISA = qw(Tie::Hash);
+package Bitcoin::KeyStore;  # aka CKeyStore
+require Tie::StdHash;
+@ISA = qw(Tie::StdHash);
 use strict;
 use warnings;
-use Bitcoin::Address;
-use Bitcoin::Key;
+use threads;
+use threads::shared;
 
-sub STORE {
-    my ($this, $key, $value) = @_;
-    my $address = new Bitcoin::Address     $key;
-    my $secret  = new Bitcoin::Key::Secret $value;
-    die "incompatible version numbers" if $secret->version != 128 + $address->version;
-    die "inconsistent entry" if $address ne $secret->address;
-    return SUPER::STORE $this $address->toBase58, $secret;
-}
+sub _no_class    { my $_ = shift; die 'class method call not implemented'    if ref     }
+sub _no_instance { my $_ = shift; die 'instance method call not implemented' unless ref }
 
-sub add {
-    my $this = shift;
-    die "class method call not implemented" unless ref $this;
-    my $arg = shift; 
-    return SUPER::STORE $this $arg->address->toBase58, $arg;
-}
+# This is a virtual class, so the following methods are only declared
+sub add_key;
+sub have_key;
+sub get_key;
+sub get_pubkey;
+sub generate_new_key;
 
-package Bitcoin::KeyStore::Basic; 		
-# This class corresponds to CBasicKeyStore but is merely an alias to Bitcoin::KeyStore
+package Bitcoin::KeyStore::Basic;  # aka CBasicKeyStore
 our @ISA = qw(Bitcoin::KeyStore);
+
+sub add_key {
+    my $this = shift->_no_class;
+    my $secret = shift;
+    do {...} unless ref $secret eq 'Bitcoin::Key::Secret';
+    { lock $this; $this->STORE($secret->address->toBase58, $secret) }
+}
+sub have_key {
+    my $this = shift->_no_class;
+    my $address = shift;
+    my $result;
+    { lock $this; $result = $this->EXISTS($address->toBase58) }
+    return $result;
+}
+sub get_key {
+    my $this = shift->_no_class;
+    my $address = shift;
+    my $result;
+    { lock $this; $result = $this->FETCH($address->toBase58) }
+    return $result;
+}
 
 package Bitcoin::KeyStore::Encrypted;
 # This class corresponds to CCryptoKeyStore but is much more rudimentary

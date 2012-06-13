@@ -1,5 +1,10 @@
 #!/usr/bin/perl
+package Bitcoin::Utils;
+@ISA = qw(Bitcoin::Util);
 package Bitcoin::Util;
+require Exporter;
+@ISA = qw(Exporter);
+@EXPORT_OK = qw(randInt);
 use strict;
 use warnings;
 
@@ -23,7 +28,7 @@ sub btoi;
 
     sub randInt {
 	use Digest::SHA qw(sha256_hex);
-	my $r = hex sha256_hex time . $$ . qx(openssl rand -rand $0 32 2>&-) . qx(ps axww |gzip -f);
+	my $r = hex sha256_hex time . $$ . qx(openssl rand 32 2>&-) . qx(ps axww |gzip -f);
 	my $m = shift;
 	return defined $m ? $r % $m : $r;
     }

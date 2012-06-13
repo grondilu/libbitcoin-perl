@@ -110,15 +110,20 @@ sub x { shift->{'x'} }
 sub y { shift->{'y'} }
 sub order { shift->{'order'} }
 use overload
+'bool' => sub { my $_ = shift; $_->x > 0 and $_->y > 0 },
 '+' => sub { EC::add($_[0], $_[1]) },
 '*' => sub { EC::mult($_[2] ? @_[1,0] : @_[0,1]) },
 q("") => sub {
     use YAML;
     my $_ = shift;
-    return $_ ?  Dump { x => $_->x->bstr, y => $_->y->bstr,
-	    order => defined($_->order) ? $_->order->bstr : 'non defined' } : 'Point at horizon';
+    return
+    $_ ?
+    Dump {
+	x => $_->x->as_hex, y => $_->y->as_hex,
+	# order => defined($_->order) ? $_->order->bstr : 'non defined'
+    } :
+    'Point at horizon';
 },
-'bool' => sub { my $_ = shift; $_->x > 0 and $_->y > 0 }
 ;
 
 package Math::BigInt;
@@ -152,7 +157,8 @@ EC - Elliptic Curve calculations in Perl
 
 This module provides functions to perform arithmetics in Elliptic Curves.
 
-A small EC::Point class overloads addition, multiplication and stringification operators.
+A small EC::Point class overloads addition, multiplication, boolean (to see if
+the point is at horizon), and stringification operators.
 
 This module DOES NOT perform ECDSA cryptography.  Use EC::DSA for that.
 
