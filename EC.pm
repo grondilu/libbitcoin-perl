@@ -7,7 +7,6 @@ use bigint;
 use integer;
 
 package EC;
-use NumberTheory qw(inverse_mod);
 
 our ($a, $b, $p, $G);
 
@@ -18,6 +17,7 @@ sub add;
 sub mult;
 
 sub import {
+    import bigint;
     my $class = shift;
     return unless @_;
     if (@_ > 1 and not @_ % 2) { $class->import( { @_ } ) }
@@ -49,7 +49,7 @@ sub check {
 sub double {
     my $u = check shift;
     return $u unless $u;
-    my $l = (3*$u->x**2 + $a) * inverse_mod(2 * $u->y, $p) % $p;
+    my $l = (3*$u->x**2 + $a) * (2 * $u->y)->bmodinv($p) % $p;
     my $x = $l**2 - 2*$u->x;
     my $y = $l*($u->x - ($x %= $p)) - $u->y;
     return bless { x => $x, y => $y % $p }, 'EC::Point';
@@ -64,7 +64,7 @@ sub add {
 	EC::Point->horizon :
 	double $u
     }
-    my $i = inverse_mod($v->x - $u->x, $p);
+    my $i = ($v->x - $u->x)->bmodinv($p);
     my $l = ($v->y - $u->y) * $i % $p;
     my $x = $l**2 - $u->x - $v->x;
     my $y = $l*($u->x - ($x %= $p)) - $u->y;
@@ -72,7 +72,7 @@ sub add {
 }
 sub mult {
     my $k = shift;
-    die "$k is not an integer" if $k ~~ /\./;
+    die "$k is not an integer" unless $k->isa('Math::BigInt');
     my $point = shift->clone;
     given($ENV{PERL_EC_METHOD}) {
 	when(not defined or /perl/i) {
@@ -83,8 +83,7 @@ sub mult {
 	    return $result;
 	}
 	when(/dc/i) {
-	    open my $dc, '-|', qw(dc -e),
-	    "
+	    open my $dc, '-|', qw(dc -e), "
 	    [[_1*lm1-*lm%q]Std0>tlm%Lts#]s%[Smddl%x-lm/rl%xLms#]s~[_1*l%x]s_[+l%x]s+[*l%x]
 	    s*[-l%x]s-[l%xsclmsd1su0sv0sr1st[q]SQ[lc0=Qldlcl~xlcsdscsqlrlqlu*-ltlqlv*-lulv
 	    stsrsvsulXx]dSXxLXs#LQs#lrl%x]sI[lpSm[+q]S0d0=0lpl~xsydsxd*3*lal+x2ly*lIx*l%xd
@@ -92,9 +91,10 @@ sub mult {
 	    :Alp~1:A0:Ad2:Blp~1:B0:B2;A2;B=d[0q]Sx2;A0;B1;Bl_xrlm*+=x0;A0;Bl-xlIxdsi1;A1;B
 	    l-xl*xdsld*0;Al-x0;Bl-xd0;Arl-xlll*x1;Al-xrlp*+L0s#Lds#Lxs#Lms#]sA[rs.0r[rl.lA
 	    xr]SP[q]sQ[d0!<Qd2%1=P2/l.lDxs.lLx]dSLxs#LPs#LQs#]sM
+	    10i
 	    $a sa $b sb $p dspsm
 	    @{[$G->y, $G->x]} lp*+ dsG
-	    $k lMx 16olm~f
+	    @{[$k->bstr]} lMx 16olm~f
 	    ";
 	    my ($x, $y) = reverse map { chomp; hex $_ } <$dc>;
 	    return bless { x => $x, y => $y }, ref $point;
@@ -105,16 +105,18 @@ sub mult {
 
 package EC::Point;
 sub horizon { bless { x => 0, y => 0 }, shift }
-sub clone { my $this = shift; bless { x => $this->x, y => $this->y }, ref $this }
+sub clone { my $_ = shift; bless { x => $_->x, y => $_->y, order => $_->order }, ref $_ }
 sub x { shift->{'x'} }
 sub y { shift->{'y'} }
+sub order { shift->{'order'} }
 use overload
 '+' => sub { EC::add($_[0], $_[1]) },
 '*' => sub { EC::mult($_[2] ? @_[1,0] : @_[0,1]) },
 q("") => sub {
     use YAML;
     my $_ = shift;
-    return $_ ?  Dump { x => $_->x->bstr, y => $_->y->bstr } : 'Point at horizon';
+    return $_ ?  Dump { x => $_->x->bstr, y => $_->y->bstr,
+	    order => defined($_->order) ? $_->order->bstr : 'non defined' } : 'Point at horizon';
 },
 'bool' => sub { my $_ = shift; $_->x > 0 and $_->y > 0 }
 ;
@@ -123,7 +125,7 @@ package Math::BigInt;
 no overload '*';
 use overload
 '*' => sub {
-    return ref($_[1]) eq 'EC::Point' ? EC::mult($_[0], $_[1]) : $_[0]->copy->bmul($_[1]);
+    return $_[1]->isa('EC::Point') ? EC::mult($_[0], $_[1]) : $_[0]->copy->bmul($_[1]);
 };
 
 1;
