@@ -10,6 +10,6 @@ modifier in s///
 Requires dc, the unix desktop calculator, as it is much faster than Math::BigInt, even
 with GMP.
 
-Requires also: BerkeleyDB, Convert::ASN1, Crypt::Rijndael, File::Map
+Requires also: BerkeleyDB, Convert::ASN1, File::Map
 
 THIS IS WORK IN PROGRESS, PROVIDED WITH ABSOLUTELY NO GUARANTEE WHATSOEVER
