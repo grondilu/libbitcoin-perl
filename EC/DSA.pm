@@ -29,24 +29,28 @@ sub verify {
 }
 sub serialize { 
     my $this = shift;
-    return pack 'H2H*H*',
-    '04', map { uc $_->badd(2**256)->as_hex =~ s/0x1//r } $this->x, $this->y;
+    $this->EC::DSA::PublicKey::UnCompressed::serialize(@_);
 }
 
 package EC::DSA::PublicKey::UnCompressed;
 our @ISA = qw(EC::DSA::PublicKey);
+sub serialize { 
+    my $this = shift;
+    return pack 'H2H*H*',
+    '04', map { uc $_->badd(2**256)->as_hex =~ s/0x1//r } $this->x, $this->y;
+}
+sub compress {
+    my $this = shift;
+    bless ref($this) ? $this : shift, 'EC::DSA::PublicKey::Compressed';
+}
 
 package EC::DSA::PublicKey::Compressed;
 our @ISA = qw(EC::DSA::PublicKey);
 sub serialize { 
     my $this = shift;
-    # WARNING:
-    # I'm not sure about that.  Just guessing.
     return pack 'H2H*H2',
-    '03', map { uc (2**256+$_->x)->as_hex =~ s/0x1//r } $this->x, $this->y > 2**255 ? 1 : 0;
+    '03', map { uc +(2**256+$_)->as_hex =~ s/0x1//r } $this->x, $this->y % 2 == 0 ? 2 : 3;
 }
-
-
 
 package EC::DSA::PrivateKey;
 require Math::BigInt;
