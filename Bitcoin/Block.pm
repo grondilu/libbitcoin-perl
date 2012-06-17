@@ -17,7 +17,7 @@ sub new {
 	$this->{transactions} = [
 	    map { Bitcoin::Transaction->new($arg) } 1 .. $arg->read_compact_size
 	];
-	# die "Merkle's tree root verification failed" if $this->header->hashMerkleRoot ne ($this->Merkle_tree)[-1];
+	die "Merkle's tree root verification failed" if $this->header->hashMerkleRoot ne ($this->Merkle_tree)[-1];
 	return $this;
     }
     elsif( uc $arg =~ /^\A[[:xdigit:]]{10,}\Z/ ) {
@@ -81,7 +81,7 @@ sub new {
 		nTime          => $arg->Read(UINT32),
 		nBits          => $arg->Read(UINT32),
 		nNonce         => $arg->Read(UINT32),
-	    }, $class); #->check_proof_of_work;
+	    }, $class)->check_proof_of_work;
     }
     elsif ( ref $arg eq 'HASH' ) {
 	return bless($arg, $class)->check_proof_of_work;
