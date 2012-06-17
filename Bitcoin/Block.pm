@@ -1,15 +1,12 @@
 #!/usr/bin/perl -w
 use Bitcoin::Digest;
+use Bitcoin::MerkleTree;
 
 package Bitcoin::Block;
 use IO::Uncompress::Bunzip2;
 use strict;
 use warnings;
 use overload '""' => sub { use YAML; Dump shift };
-
-use IO::Uncompress::Bunzip2 qw($Bunzip2Error);
-my $z = new IO::Uncompress::Bunzip2 "bitcoin-blocks.bz2"
-    or die $Bunzip2Error;
 
 sub new {
     my $class = shift;
@@ -20,16 +17,11 @@ sub new {
 	$this->{transactions} = [
 	    map { Bitcoin::Transaction->new($arg) } 1 .. $arg->read_compact_size
 	];
-	die "Merkle's tree root verification failed"
-	if $this->header->hashMerkleRoot ne +($this->Merkle_tree)[-1];
+	# die "Merkle's tree root verification failed" if $this->header->hashMerkleRoot ne ($this->Merkle_tree)[-1];
 	return $this;
     }
     elsif( uc $arg =~ /^\A[[:xdigit:]]{10,}\Z/ ) {
 	$class->new(Bitcoin::DataStream->new(pack 'H*', $arg));
-    }
-    elsif( $arg < 100_000 ) {
-	my @line = <$z>;
-	$class->new($line[$arg]);
     }
     else { die 'unknown argument type' }
 }
@@ -68,8 +60,8 @@ package Bitcoin::Block::Header;
 use Bitcoin::DataStream qw(:types);
 use Bitcoin::Transaction;
 
-sub _no_class;
-sub _no_instance;
+sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }
+sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }
 
 sub version		{ shift->_no_class->{version}        // die 'undefined version' }
 sub hashPrev		{ shift->_no_class->{hashPrev}       // die 'undefined hashPrev' }
@@ -89,17 +81,14 @@ sub new {
 		nTime          => $arg->Read(UINT32),
 		nBits          => $arg->Read(UINT32),
 		nNonce         => $arg->Read(UINT32),
-	    }, $class)->check_proof_of_work;
+	    }, $class); #->check_proof_of_work;
     }
     elsif ( ref $arg eq 'HASH' ) {
 	return bless($arg, $class)->check_proof_of_work;
     }
-    elsif ( not defined ref $arg ) { new $class new Bitcoin::DataStream $arg }
+    elsif ( not defined ref $arg ) { $class->new(Bitcoin::DataStream->new($arg)) }
     else { die "wrong argument format" }
 }
-
-sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }
-sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }
 
 sub copy {
     my $this = shift->_no_class;
@@ -141,6 +130,49 @@ sub check_proof_of_work {
 	my $target = $_->target($nBits);
 	die "target doesn't provide minimum work" if $target > 2**(256 - 32) - 1;
 	die "hash doesn't match nBits" if $target < hex $hash_hex;
+    }
+}
+
+package Bitcoin::Block::Explorer;
+require Exporter;
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw(get_latest_block );
+use LWP::Simple;
+sub url() { "http://blockexplorer.com/" }
+sub get_latest_block { get(url . "latest_block") // die "could not get latest block" }
+sub get_block {
+    my $this = shift;
+    my $block_identifier = shift;
+    use JSON;
+    my $hash = get( url . "get_block_hash/$block_identifier" ) // die "could not get block's hash";
+    my $rawblock = decode_json get(url . "rawblock/$hash") // die "could not get block $hash";
+}
+
+sub convert {
+    my $class = shift;
+    my $hash = shift;
+    my $header = bless { # qw(version hashPrev hashMerkleRoot nTime nBits nNonce);
+	version =>		$hash->{ver},
+	hashPrev =>		scalar(reverse pack 'H*', $hash->{prev_block}),
+	hashMerkleRoot =>	scalar(reverse pack 'H*', $hash->{mrkl_root}),
+	nTime =>		$hash->{time},
+	nNonce =>		$hash->{nonce},
+	nBits =>		$hash->{bits},
+    }, 'Bitcoin::Block::Header';
+    my @tx;
+    if(exists $hash->{tx}) {
+	for( @{$hash->{tx}} ) {
+	    push @tx, bless {
+		txIn => [
+		    map {
+		    scriptSig => $_->{coinbase},
+		    prevout_hash => $_->{prev_out}{hash},
+		    prevout_n => $_->{prev_out}{n},
+		    }, $_->{in}
+		],
+		sequence => $_->{sequence},
+	    }, 'Bitcoin::Transaction';
+	}
     }
 }
 

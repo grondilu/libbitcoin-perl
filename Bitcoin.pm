@@ -9,8 +9,6 @@ use Bitcoin::Base58;
 use Bitcoin::Database; 
 use Bitcoin::Block;
 
-our $data_dir	= $ENV{BITCOIN_DATA_DIR} // $ENV{HOME}.'/.bitcoin';
-
 sub import {
     my $package = shift;
 
@@ -31,7 +29,6 @@ sub import {
 	return $s;
     };
 }
-
 
 package Bitcoin::Key;
 our @ISA = qw(

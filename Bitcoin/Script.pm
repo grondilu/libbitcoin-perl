@@ -34,7 +34,7 @@ sub unbless { [ map $_->unbless, @{shift()} ] }
 
 package Bitcoin::Script::Atom;
 our @ISA = qw(Bitcoin::Script);
-require Bitcoin::Script::Codes;
+use Bitcoin::Script::Codes;
 use overload
 q(@{})	=> sub { [ shift ] },
 q(&{})	=> sub { my $op_code = shift->{op_code}; ${$Bitcoin::Script::Codes::{$op_code}}->[1] },
@@ -90,8 +90,8 @@ sub new {
 	    return bless $this, $class.'::ASCII';
 	}
 	elsif (/\A\x{04}(?<x>.{32})(?<y>.{32})\Z/ms)    {
-	    use Bitcoin;
 	    use bigint;
+	    require Bitcoin;
 	    $this->{address} = Bitcoin::Address->new(
 		bless { map { $_ => hex unpack 'H*', $+{$_} } qw(x y) }, 'EC::DSA::PublicKey'
 	    );

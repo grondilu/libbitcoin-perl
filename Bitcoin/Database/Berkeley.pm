@@ -91,6 +91,47 @@ sub new {
     return $index;
 }
 
+package Bitcoin::Block::Index;
+sub new {
+    my $class = shift;
+    die 'instance method call not implemented for this class' if ref $class;
+    my $arg = shift;
+    if    (ref $arg eq 'Bitcoin::Block')      {...}
+    elsif (ref $arg eq 'Bitcoin::DataStream') {
+	use Bitcoin::DataStream qw(:types);
+	return bless {
+	    version   => $arg->Read(INT32),
+	    hashNext  => $arg->Read(BYTE . 32),
+	    nFile     => $arg->Read(UINT32),
+	    nBlockPos => $arg->Read(UINT32),
+	    nHeight   => $arg->Read(INT32),
+	}, $class;
+    }
+    else {...}
+}
+
+package Bitcoin::Disk::Block::Index;
+our @ISA = qw(Bitcoin::Disk::Index);
+use Bitcoin::Block;
+sub prefix() { 'blockindex' }
+sub filename() { 'blkindex.dat' }
+sub indexed_object() { 'Bitcoin::Block::Index' }
+
+package Bitcoin::Block;
+sub load {
+    my $class = shift;
+    my $arg = shift;
+    if ($arg =~ s/^(?:0x)?([a-f\d]{64})$/$1/) { 
+	my $index = new Bitcoin::Disk::Block::Index $arg;
+	return $class->new(
+	    Bitcoin::DataStream->new->map_file(
+		sprintf('%s/blk%04d.dat', Bitcoin::Constants::DATA_DIR, $index->{$arg}{nFile}),
+		$index->{$arg}{nBlockPos}
+	    )
+	);
+    }
+    else {...}
+}
 1;
 
 

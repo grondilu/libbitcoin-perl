@@ -19,6 +19,7 @@ sub load {
 	$sth->bind_param(1, $hash);
 	$sth->execute;
 	my $unblessed = $sth->fetchrow_hashref;
+	return undef unless defined $unblessed;
 	my $header = {
 	    map { $_ => $unblessed->{$_} }
 	    grep { exists $unblessed->{$_} }
