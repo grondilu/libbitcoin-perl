@@ -14,17 +14,18 @@ sub load {
 	my $hash = shift;
 	$hash = pack 'H*', $hash if $hash =~ /\A[[:xdigit:]]{64}\z/;
 	my $sth = $Bitcoin::Database::SQL::dbh->prepare(
-	    q{ select * from block where hash = ? }
+	    q{ select * from block where hash = ? or hash = ? }
 	);
 	$sth->bind_param(1, $hash);
+	$sth->bind_param(2, scalar reverse $hash);
 	$sth->execute;
 	my $unblessed = $sth->fetchrow_hashref;
 	return undef unless defined $unblessed;
-	my $header = {
+	my $header = bless {
 	    map { $_ => $unblessed->{$_} }
 	    grep { exists $unblessed->{$_} }
 	    qw(version hashPrev hashMerkleRoot nTime nBits nNonce)
-	};
+	}, 'Bitcoin::Block::Header';
 	my $block = {
 	    map { $_ => $unblessed->{$_} }
 	    grep { exists $unblessed->{$_} }
@@ -56,6 +57,21 @@ sub save {
     return $block;
 }
 
+sub dbupdate {
+    my $this = shift;
+    my $sth = $Bitcoin::Database::SQL::dbh->prepare(
+	q{
+	update block
+	set depth = ?, work = ?
+	where hash = ?
+	}
+    );
+    $sth->bind_param(1, $this->depth);
+    $sth->bind_param(2, $this->work);
+    $sth->bind_param(3, $this->get_hash);
+    my $rc = $sth->execute;
+    return $this;
+}
 
 
 1;

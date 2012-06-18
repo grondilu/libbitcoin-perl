@@ -58,9 +58,7 @@ sub cursor { shift->_no_class->{cursor} }
 sub input  { shift->_no_class->{input} }
 
 # overloading
-use overload
-'""' => sub { unpack 'H*', shift->input },
-;
+use overload '""' => sub { unpack 'H*', shift->input };
 
 # methods
 #

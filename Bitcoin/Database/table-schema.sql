@@ -13,6 +13,7 @@ CREATE TABLE block (
 
     key (hashMerkleRoot),
     key (hashPrev)
+    key (depth)
 );
 CREATE TABLE chain ( lastHash char(32) binary primary key );
 

@@ -8,6 +8,8 @@ use strict;
 use warnings;
 use overload '""' => sub { use YAML; Dump shift };
 
+sub depth { shift->{depth} }
+sub work { shift->{work} }
 sub new {
     my $class = shift;
     my $arg = $_[0];
@@ -54,6 +56,27 @@ sub Merkle_tree {
 	$j += $size;
     }
     return @tree;
+}
+
+sub update {
+    use Bitcoin::Constants;
+    my $this = shift;
+    if(unpack("H*", reverse $this->get_hash) eq Bitcoin::Constants::GENESIS) {
+	$this->{depth} = 0; $this->{work} = $this->header->work;
+	return $this->dbupdate;
+    }
+    my $previous_block = load $this->header->hashPrev;
+    if(not defined $previous_block) {
+	die 'could not find previous block';
+    }
+    elsif(defined $previous_block->depth and defined $previous_block->work) {
+	$this->{depth} = $previous_block->depth + 1;
+	$this->{work} = $previous_block->work + $this->work;
+    }
+    else {
+	eval { $previous_block->update };
+	$this->update unless $@;
+    }
 }
 
 package Bitcoin::Block::Header;
@@ -120,7 +143,7 @@ sub target {
     return $n * 256**($size - 3);
 }
 
-sub work { 64 - log(shift->target)/log(16) }
+sub work { 256 - log(shift->target)/log(2) }
 sub check_proof_of_work {
     my $_ = shift;
     if (ref) { ref->check_proof_of_work($_->get_hash_hex, $_->{nBits}); return $_ }
@@ -130,49 +153,6 @@ sub check_proof_of_work {
 	my $target = $_->target($nBits);
 	die "target doesn't provide minimum work" if $target > 2**(256 - 32) - 1;
 	die "hash doesn't match nBits" if $target < hex $hash_hex;
-    }
-}
-
-package Bitcoin::Block::Explorer;
-require Exporter;
-our @ISA = qw(Exporter);
-our @EXPORT_OK = qw(get_latest_block );
-use LWP::Simple;
-sub url() { "http://blockexplorer.com/" }
-sub get_latest_block { get(url . "latest_block") // die "could not get latest block" }
-sub get_block {
-    my $this = shift;
-    my $block_identifier = shift;
-    use JSON;
-    my $hash = get( url . "get_block_hash/$block_identifier" ) // die "could not get block's hash";
-    my $rawblock = decode_json get(url . "rawblock/$hash") // die "could not get block $hash";
-}
-
-sub convert {
-    my $class = shift;
-    my $hash = shift;
-    my $header = bless { # qw(version hashPrev hashMerkleRoot nTime nBits nNonce);
-	version =>		$hash->{ver},
-	hashPrev =>		scalar(reverse pack 'H*', $hash->{prev_block}),
-	hashMerkleRoot =>	scalar(reverse pack 'H*', $hash->{mrkl_root}),
-	nTime =>		$hash->{time},
-	nNonce =>		$hash->{nonce},
-	nBits =>		$hash->{bits},
-    }, 'Bitcoin::Block::Header';
-    my @tx;
-    if(exists $hash->{tx}) {
-	for( @{$hash->{tx}} ) {
-	    push @tx, bless {
-		txIn => [
-		    map {
-		    scriptSig => $_->{coinbase},
-		    prevout_hash => $_->{prev_out}{hash},
-		    prevout_n => $_->{prev_out}{n},
-		    }, $_->{in}
-		],
-		sequence => $_->{sequence},
-	    }, 'Bitcoin::Transaction';
-	}
     }
 }
 
@@ -188,21 +168,22 @@ Bitcoin::Block
 
     use Bitcoin::Block;
 
-    my $block = new Bitcoin::Block Bitcoin::GENESIS;
-    my $block = new Bitcoin::Block 121_899;
-    my @block = new Bitcoin::Block qr/^0+19/;
     my $block = new Bitcoin::Block $binary_block;
-    my @block = new Bitcoin::Block -prevHash => '0x.....', -MerkleRoot => '.....', ...  ;
-    my @block = new Bitcoin::Block { prevHash => '0x.....', MerkleRoot => '.....', ... } ;
+    my $block = load Bitcoin::Block Bitcoin::GENESIS;
+    my $block = load Bitcoin::Block 121_899;
+    my @block = search Bitcoin::Block qr/^0+19/;
 
-    # human-friendly summary
+    # serialize
+    say unpack 'H*', serialize $block;
+
+    # human-friendly dump
     say $block;
 
-    # Full dump (using YAML for instance)
-    use YAML;
-    print +Dump $block;
+    # updates work and depth
+    update $block;
 
-    print unpack 'H*', serialize $block;
+    # saves on database
+    save $block;
 
 =head1 DESCRIPTION
 
