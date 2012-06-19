@@ -15,13 +15,6 @@ CREATE TABLE block (
     key (hashPrev)
     key (depth)
 );
-CREATE TABLE chain ( lastHash char(32) binary primary key );
-
-CREATE TABLE block_chain (
-    block char(32) binary not null,
-    chain char(32) binary not null,
-    primary key (block, chain)
-);
 
 CREATE TABLE transaction (
     hash char(32) binary primary key,
@@ -36,4 +29,17 @@ CREATE TABLE Merkle_tree (
     primary key (root, idx),
     key (root)
 );
+
+CREATE VIEW view_block AS
+SELECT 
+HEX(hash) as hash,
+version,
+HEX(hashPrev) as hashPrev,
+HEX(hashMerkleRoot) as hashMerkleRoot,
+nTime,
+nBits,
+nNonce,
+work,
+depth
+FROM block;
 

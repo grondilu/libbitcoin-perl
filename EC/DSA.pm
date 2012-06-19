@@ -16,13 +16,12 @@ use warnings;
 use overload '&{}' => sub { my $this = shift; sub { $this->verify(@_) } };
 
 sub verify {
-    use NumberTheory q(inverse_mod);
     my $this = shift;
     die "class method call not implemented" unless ref $this;
     my $n = $EC::G->order;
     my ($h, $r, $s) = @_;
     die "out of range" if $r < 1 or $r > $n - 1 or $s < 1 or $s > $n -1;
-    my $c = inverse_mod($s, $n);
+    my $c = $s->binvmod($n);
     my @u = map { $_*$c % $n } $h, $r;
     my $xy = $u[0] * $EC::G  +  $u[1] * $this;
     die "wrong signature" unless $xy->x % $n == $r;
@@ -69,7 +68,7 @@ sub sign {
     my $p = $k * $EC::G;
     my $r = $p->x;
     die "amazingly unlucky random number r" if $r == 0;
-    my $s = ( NumberTheory::inverse_mod( $k, $n ) * ($h + ($_ * $r) % $n) ) % $n;
+    my $s = ( $k->binvmod($n) * ($h + ($_ * $r) % $n) ) % $n;
     die "amazingly unlucky random number s" if $s == 0;
     return $r, $s;
 }

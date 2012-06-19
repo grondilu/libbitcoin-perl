@@ -23,7 +23,7 @@ sub import {
 	    push @error, $@;
 	    $Base58Data = eval { new Bitcoin::Address $s };
 	    push @error, $@;
-	    warn "could not convert $s into a bitcoin address or key (@error).";
+	    warn "could not convert $s into a bitcoin address or key";
 	    return $Base58Data unless $@;
 	}
 	return $s;
