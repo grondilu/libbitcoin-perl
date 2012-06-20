@@ -14,20 +14,23 @@ sub import {
 
     import bigint;
     use overload;
-    overload::constant q => sub {
-	my $s = shift;
-	if($s =~ /\A$Bitcoin::Base58::b58 {20,}\z/x) {
-	    my ($Base58Data, @error);
-	    $Base58Data = eval { new Bitcoin::Key $s };
-	    return $Base58Data unless $@;
-	    push @error, $@;
-	    $Base58Data = eval { new Bitcoin::Address $s };
-	    push @error, $@;
-	    warn "could not convert $s into a bitcoin address or key";
-	    return $Base58Data unless $@;
-	}
-	return $s;
-    };
+    # This allows magical recognition of bitcoin address in string litterals.
+    unless( ':nomagic' ~~ [ @_ ] ) {
+	overload::constant q => sub {
+	    my $s = shift;
+	    if($s =~ /\A$Bitcoin::Base58::b58 {20,}\z/x) {
+		my ($Base58Data, @error);
+		$Base58Data = eval { new Bitcoin::Key $s };
+		return $Base58Data unless $@;
+		push @error, $@;
+		$Base58Data = eval { new Bitcoin::Address $s };
+		push @error, $@;
+		return $Base58Data unless $@;
+		warn "could not convert $s into a bitcoin address or key";
+	    }
+	    return $s;
+	};
+    }
 }
 
 package Bitcoin::Key;
@@ -52,7 +55,8 @@ sub new {
 	die 'invalid key' unless $arg eq $new->to_base58;
 	return $new;
     }
-    elsif (defined $arg and ref $arg and $arg->isa($class)) { return $arg }
+    elsif( defined $arg and ref $arg and $arg->isa($class) ) { return $arg }
+    elsif( not defined $arg ) { $class->random }
     else { $class->SUPER::new($arg) }
 }
 
@@ -99,6 +103,8 @@ Bitcoin
     use Bitcoin;
 
     say my $k = new Bitcoin::Key;
+    say my $k = random Bitcoin::Key; # same thing
+
     my $addr = new Bitcoin::Address "1456someSi11yBi1c6inAddressXnkjn56dxx"
         or die "this is not a valid bitcoin address";
     my $addr = "1456someSi11yBi1c6inAddressXnkjn56dxx";
