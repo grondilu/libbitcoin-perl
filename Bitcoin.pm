@@ -3,6 +3,9 @@ use v5.14;
 use strict;
 use warnings;
 
+$ENV{BITCOIN_TEST} //= 'no';
+$ENV{BITCOIN_MAGIC} //= 'yes';
+
 package Bitcoin;
 use EC::DSA qw(secp256k1);
 use Bitcoin::Base58;
@@ -14,8 +17,11 @@ sub import {
 
     import bigint;
     use overload;
-    # This allows magical recognition of bitcoin address in string litterals.
-    unless( ':nomagic' ~~ [ @_ ] ) {
+    unless( ':nomagic' ~~ [ @_ ]
+	    or lc $ENV{BITCOIN_MAGIC} ~~ [ qw(no none false) ]
+    ) {
+	# This allows magical recognition of bitcoin addresses or keys in
+	# string literals.
 	overload::constant q => sub {
 	    my $s = shift;
 	    if($s =~ /\A$Bitcoin::Base58::b58 {20,}\z/x) {
@@ -39,7 +45,7 @@ our @ISA = qw(
     EC::DSA::PrivateKey
 );
 sub size() { 256 }
-sub version() { defined($ENV{BITCOIN_TEST}) ? 129 : 128 }
+sub version() { $ENV{BITCOIN_TEST} ~~ /yes|true/i ? 129 : 128 }
 sub value { bless shift->copy(), 'Math::BigInt'; }
 sub address { new Bitcoin::Address shift->public_key }
 
@@ -63,7 +69,7 @@ sub new {
 package Bitcoin::Address;
 our @ISA = qw(Bitcoin::Base58::Data);
 sub size() { 160 }
-sub version() { defined($ENV{BITCOIN_TEST}) ? 1 : 0 }
+sub version() { $ENV{BITCOIN_TEST} ~~ /yes|true/i ? 1 : 0 }
 sub data {
     my $this = shift;
     ref $this ? $this->{data} : $this->SUPER::data(@_);
@@ -127,6 +133,64 @@ virtual class Bitcoin::Base58::Data and EC::DSA::PrivateKey.
 
 - Bitcoin::Address encapsulates a bitcoin public key, aka a bitcoin address.
 It inherits from Bitcoin::Base58::Data.
+
+=head2 Magic litteral recognition
+
+By default the library recognizes bitcoin addresses or keys in string literals.  This
+allows you to write something like:
+
+    say "5JYazF125AwHtaDBDgBFsFc7Q7PKtoePndwJN2z1YfTBN3ThKx8"->address;
+
+To avoid this magic behavior, you can either import the library with a ':nomagic' option:
+
+    use Bitcoin qw(:nomagic);
+
+or set the environment variable BITCOIN_MAGIC to 'no', 'none' or 'false'.
+
+=head2 Modular and Elliptic curve arithmetics
+
+Bitcoin::Key inherits from EC::DSA::PrivateKey, which inherits from
+Math::BigInt, with overload arithmetics operators in order to support modular
+arithmetics. Therefore you can multiply a private key by an integer, and you'll
+get an other private key (the multiplication here is the modular multiplication
+whose modulus is the order of the secp256k1 sub-group).
+
+You can also multiply or add public keys made out of private keys, as such a
+public keys derive from EC::Point.  You'll get elliptic curve arithmetics.
+
+This allows secure agreement on a common public key, as in the following example.
+
+=head3 Diffie-Hellman-like protocol
+
+Alice want to send Bob some bitcoins in exchange from some product to be received by mail,
+but she wants a way to make sure Bob will not be able to cash the bitcoins in until she
+actually receives the expected product.
+
+Both of them generate new, random bitcoin key, and both of them compute the
+corresponding public key.
+
+    A> my $key = random Bitcoin::Key;
+    A> my $pubic_key_A = public_key $key;
+
+    B> my $key = random Bitcoin::Key;
+    B> my $pubic_key_B = public_key $key;
+
+They communicate one an other their respective public keys, they multiply it by their
+own private key, and they get the corresponding Bitcoin address.
+
+    A> my $common_address = new Bitcoin::Address $key * $public_key_B
+    B> my $common_address = new Bitcoin::Address $key * $public_key_A
+
+They verify that their common address is really the same by communicating it
+(or part of it) to one another.
+
+At this point none of them has the private key matching this bitcoin address.
+Alice can now send her bitcoins to this address.
+
+Once Alice has received her product, she communicates to Bob her initial private key,
+and Bob can find the private key of the common address by running:
+
+    B> my $cash_in_key = new Bitcoin::Key $key * $key_A;
 
 =head1 SEE ALSO
 
