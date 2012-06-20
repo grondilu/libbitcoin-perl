@@ -3,6 +3,7 @@ use v5.14;
 use strict;
 use warnings;
 
+# default environment variables
 $ENV{BITCOIN_TEST} //= 'no';
 $ENV{BITCOIN_MAGIC} //= 'yes';
 
