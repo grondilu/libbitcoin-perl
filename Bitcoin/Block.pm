@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 use Bitcoin::Digest;
-use Bitcoin::MerkleTree;
 
 package Bitcoin::Block;
 use IO::Uncompress::Bunzip2;
