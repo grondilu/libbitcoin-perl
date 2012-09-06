@@ -17,15 +17,10 @@ sub new {
 	my $filename = shift;
 	my $subname  = shift // 'main';
 	return SUPER::new $class
-	-Filename => $filename,
+	-Filename => Bitcoin::Constants::DATA_DIR . "/$filename",
 	-Subname  => $subname,
-	-Env      => BerkeleyDB::Env->new(
-	    -Home => Bitcoin::Constants::DATA_DIR,
-	    -Flags => DB_CREATE| DB_INIT_LOCK| DB_INIT_LOG| DB_INIT_MPOOL| DB_INIT_TXN| DB_THREAD| DB_RECOVER,
-	),
 	-Flags    => DB_THREAD| DB_RDONLY,
-	    or die "could not tie $filename: $!"
-	;
+	    or die "could not tie $filename: $!";
     }
     else {...}
 }
@@ -51,7 +46,7 @@ sub new {
     my $class = shift;
     my $arg = shift;
     my $db = new Bitcoin::Database::Berkeley $class->filename;
-    die "could not open database ". $class->filename unless defined $db;
+    die "could not open database ". $class->filename . ": $!" unless defined $db;
     my $cursor = $db->db_cursor;
     my ($prefix,) = map chr(length). $_, $class->prefix;
     my ($k, $v) = ($prefix, '');
