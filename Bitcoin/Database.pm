@@ -1,5 +1,6 @@
 package Bitcoin::Database;
-use parent qw(Bitcoin::Database::SQL);
+#use parent qw(Bitcoin::Database::SQL);
+use parent qw(Bitcoin::Database::Berkeley);
 
 1;
 

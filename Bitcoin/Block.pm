@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 use Bitcoin::Digest;
+require Bitcoin::Constants;
 
 package Bitcoin::Block;
-use IO::Uncompress::Bunzip2;
 use strict;
 use warnings;
 use overload '""' => sub { use YAML; Dump shift };
@@ -20,6 +20,12 @@ sub new {
 	];
 	die "Merkle's tree root verification failed" if $this->header->hashMerkleRoot ne ($this->Merkle_tree)[-1];
 	return $this;
+    }
+    elsif( uc $arg =~ /^\A[[:xdigit:]]{64}\Z/ ) {
+	my $index = new Bitcoin::Disk::Block::Index $arg;
+	return new $class Bitcoin::DataStream->new->map_file(
+	    sprintf('%s/blk%04d.dat', Bitcoin::Constants::DATA_DIR, $index->{$arg}{nFile}),
+	    $index->{$arg}{nBlockPos});
     }
     elsif( uc $arg =~ /^\A[[:xdigit:]]{10,}\Z/ ) {
 	$class->new(Bitcoin::DataStream->new(pack 'H*', $arg));
