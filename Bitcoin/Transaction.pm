@@ -37,9 +37,8 @@ sub new {
 	    lockTime 	=> $arg->Read(UINT32),                                           # 10
 	}, $class;
     }
-    else {
-	...
-    }
+    elsif(not ref $arg) { $class->new(new Bitcoin::DataStream $arg) }
+    else {...}
 }
 
 sub serialize {
