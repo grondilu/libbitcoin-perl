@@ -3,12 +3,9 @@ use v5.14;
 use strict;
 use warnings;
 
-# default environment variables
-$ENV{BITCOIN_TEST} //= 'no';
-$ENV{BITCOIN_MAGIC} //= 'yes';
-
 package Bitcoin;
 use EC::DSA qw(secp256k1);
+use Bitcoin::Constants;
 use Bitcoin::Base58;
 use Bitcoin::Database; 
 use Bitcoin::Block;
@@ -19,7 +16,7 @@ sub import {
     import bigint;
     use overload;
     unless( ':nomagic' ~~ [ @_ ]
-	    or lc $ENV{BITCOIN_MAGIC} ~~ [ qw(no none false) ]
+	    or not Bitcoin::Constants::MAGIC
     ) {
 	# This allows magical recognition of bitcoin addresses or keys in
 	# string literals.

@@ -1,97 +1,112 @@
 
-ModularInteger.pm,100
-package ModularInteger;ModularInteger2,16
-sub import {import9,83
-sub unimport {unimport14,155
+EC.pm,565
+package EC;EC9,117
+sub import {import19,207
+sub Delta { -16*(4*$a**3 + 27*$b**2) }Delta40,880
+sub check {check41,919
+sub double {double49,1252
+sub add {add57,1511
+sub mult {mult73,1976
+package EC::Point;EC::Point106,3182
+sub horizon { bless { x => 0, y => 0 }, shift }horizon107,3201
+sub clone { my $_ = shift; bless { x => $_->x, y => $_->y, order => $_->order }, ref $_ }clone108,3249
+sub x { shift->{'x'} }x109,3339
+sub y { shift->{'y'} }y110,3362
+sub order { shift->{'order'} }order111,3385
+package Math::BigInt;Math::BigInt129,3800
 
-Bitcoin/DataStream.pm,994
+Bitcoin.pm,576
+package Bitcoin;Bitcoin10,150
+sub import {import16,260
+package Bitcoin::Key;Bitcoin::Key43,946
+sub size() { 256 }size48,1036
+sub version() { $ENV{BITCOIN_TEST} ~~ /yes|true/i ? 129 : 128 }version49,1055
+sub value { bless shift->copy(), 'Math::BigInt'; }value50,1119
+sub address { new Bitcoin::Address shift->public_key }address51,1170
+sub new {new53,1226
+package Bitcoin::Address;Bitcoin::Address70,1683
+sub size() { 160 }size72,1747
+sub version() { $ENV{BITCOIN_TEST} ~~ /yes|true/i ? 1 : 0 }version73,1766
+sub data {data74,1826
+sub new {new79,1918
+
+Bitcoin/CNames.pm,1046
+package Bitcoin::CNames;Bitcoin::CNames2,16
+package CPrivKey;		our @ISA = qw(Bitcoin::Key::Private);CPrivKey5,113
+package CSecret;		our @ISA = qw(Bitcoin::Key::Secret);CSecret6,170
+package CMasterKey;		our @ISA = qw(Bitcoin::Key::MasterKey);CMasterKey7,225
+package CBase58Data;		our @ISA = qw(Bitcoin::Base58::Data);CBase58Data10,312
+package CBitcoinAddress;	our @ISA = qw(Bitcoin::Address);CBitcoinAddress13,399
+package CWallet;		our @ISA = qw(Bitcoin::Wallet);CWallet16,483
+package CKeyStore;		our @ISA = qw(Bitcoin::KeyStore);CKeyStore19,561
+package CBasicKeyStore;		our @ISA = qw(Bitcoin::KeyStore::Basic);CBasicKeyStore20,615
+package CCryptoKeyStore;	our @ISA = qw(Bitcoin::KeyStore::Encrypted);CCryptoKeyStore21,681
+package CBlock;			our @ISA = qw(Bitcoin::Block);CBlock24,776
+package CBlockIndex;		our @ISA = qw(Bitcoin::Block::Index);CBlockIndex25,825
+package CBlockLocator;		our @ISA = qw(Bitcoin::Block::Locator);CBlockLocator26,885
+package CAddress;		our @ISA = qw(Bitcoin::Network::Address);CAddress29,977
+
+Bitcoin/DataStream.pm,993
 package Bitcoin::DataStream;Bitcoin::DataStream2,16
 sub new {new47,746
 sub cursor { shift->_no_class->{cursor} }cursor57,934
 sub input  { shift->_no_class->{input} }input58,976
-sub clear { my $_ = shift->_no_class; @$_[0,1] = (0, '') }clear67,1103
-sub depth { length shift->{input} }depth68,1162
-sub map_file {map_file70,1199
-sub seek_file  { my $_ = shift->_no_class; $_->{cursor} = shift }seek_file78,1380
-sub close_file { undef shift->_no_class->{input} }close_file79,1446
-sub Read {Read81,1498
-sub Write {Write92,1877
-sub write_string {write_string101,2180
-sub read_bytes {read_bytes108,2328
-sub read_compact_size {read_compact_size117,2586
-sub write_compact_size {write_compact_size126,2881
-sub calc_size {calc_size136,3277
-sub _no_class    { my $_ = shift; die "class method not implemented"    unless ref; return $_ }_no_class149,3675
-sub _no_instance { my $_ = shift; die "instance method not implemented" if ref;     return $_ }_no_instance150,3771
-
-Bitcoin/Script.pm,1014
-package Bitcoin::Script;Bitcoin::Script2,16
-sub new {new12,203
-sub code {code28,764
-sub unbless { [ map $_->unbless, @{shift()} ] }unbless33,894
-package Bitcoin::Script::Atom;Bitcoin::Script::Atom35,943
-sub new {new43,1104
-sub code { my $_ = shift; $_->{code} // sprintf '%2x', ${'Bitcoin::Script::Codes::'.$_->{op_code}}->[0] }code51,1374
-sub _length { my $_ = shift; length($_->code) / 2 }_length52,1480
-sub unbless { +{ %{shift()} } }unbless53,1532
-package Bitcoin::Script::OP;Bitcoin::Script::OP55,1565
-sub new {new58,1674
-package Bitcoin::Script::PushData;Bitcoin::Script::PushData66,1902
-sub data { my $this = shift; substr pack('H*', $this->{code}), $this->{offset} }data72,2090
-sub new {new73,2171
-package Bitcoin::Script::PushData::ASCII;Bitcoin::Script::PushData::ASCII105,3134
-sub data { shift->{text} }data107,3218
-package Bitcoin::Script::PushData::PublicKey;Bitcoin::Script::PushData::PublicKey109,3246
-sub data { substr pack('H*', shift->{code}), 1 }data111,3334
+sub clear { my $_ = shift->_no_class; @$_[0,1] = (0, '') }clear65,1101
+sub depth { length shift->{input} }depth66,1160
+sub map_file {map_file68,1197
+sub seek_file  { my $_ = shift->_no_class; $_->{cursor} = shift }seek_file76,1378
+sub close_file { undef shift->_no_class->{input} }close_file77,1444
+sub Read {Read79,1496
+sub Write {Write90,1875
+sub write_string {write_string99,2178
+sub read_bytes {read_bytes106,2326
+sub read_compact_size {read_compact_size115,2584
+sub write_compact_size {write_compact_size124,2879
+sub calc_size {calc_size134,3320
+sub _no_class    { my $_ = shift; die "class method not implemented"    unless ref; return $_ }_no_class147,3718
+sub _no_instance { my $_ = shift; die "instance method not implemented" if ref;     return $_ }_no_instance148,3814
 
 Bitcoin/Electrum.pm,149
 package Bitcoin::Electrum;Bitcoin::Electrum2,19
 use constant SERVERS => qw(SERVERS6,72
-sub py2json {py2json23,427
-sub json2py {json2py28,574
+sub py2json {py2json32,762
+sub json2py {json2py37,909
 
-Bitcoin/Address.pm,204
-package Bitcoin::Address;Bitcoin::Address2,19
-sub size() { 160 }size11,172
-sub default_version() { Bitcoin::TEST ? 1 : 0 }default_version12,191
-sub new {new18,314
-sub _from_PEM {_from_PEM33,847
+Bitcoin/Database/SQL.pm,183
+package Bitcoin::Database::SQL;Bitcoin::Database::SQL1,0
+package Bitcoin::Block;Bitcoin::Block9,155
+sub load {load10,179
+sub save {save39,1018
+sub dbupdate {dbupdate60,1665
 
-Bitcoin/Block.pm,1336
-package Bitcoin::Block;Bitcoin::Block5,56
-sub new {new10,159
-sub unbless {unbless35,984
-sub serialize {serialize46,1143
-sub get_hash { my $this = shift->_no_class; Bitcoin::hash $this->SUPER::serialize }get_hash57,1550
-sub Merkle_tree {Merkle_tree59,1635
-package Bitcoin::Block::Header;Bitcoin::Block::Header75,2157
-sub new {new92,2468
-sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance136,4233
-sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class137,4331
-sub copy {copy139,4430
-sub previous {previous144,4516
-sub serialize {serialize153,4719
-sub get_hash { my $this = shift->_no_class; Bitcoin::hash $this->serialize }get_hash166,4998
-sub get_hash_hex { my $this = shift->_no_class; unpack 'H*', reverse $this->get_hash }get_hash_hex167,5075
-sub check_proof_of_work {check_proof_of_work169,5163
-package Bitcoin::Block::Index;   # aka CBlockIndexBitcoin::Block::Index182,5623
-sub new {new184,5675
-package Bitcoin::Disk::Block::Index;  # aka CDiskBlockIndexBitcoin::Disk::Block::Index201,6189
-sub prefix()         { 'blockindex' }prefix203,6286
-sub indexed_object() { 'Bitcoin::Block::Index' }indexed_object204,6324
-package Bitcoin::Block::Locator;Bitcoin::Block::Locator206,6374
+Bitcoin/Database/Berkeley.pm,860
+package Bitcoin::Database::Berkeley; # aka CDBBitcoin::Database::Berkeley5,66
+sub _no_class    { my $_ = shift; die "class method not implemented"    unless ref; return $_ }_no_class11,186
+sub _no_instance { my $_ = shift; die "instance method not implemented" if ref;     return $_ }_no_instance12,282
+sub new {new14,379
+sub Read {Read28,726
+package Bitcoin::Disk::Index;Bitcoin::Disk::Index37,980
+sub new {new45,1189
+	SEARCH: {SEARCH66,1983
+package Bitcoin::Block::Index;Bitcoin::Block::Index89,2740
+sub new {new90,2771
+package Bitcoin::Disk::Block::Index;Bitcoin::Disk::Block::Index108,3282
+sub prefix() { 'blockindex' }prefix111,3376
+sub filename() { 'blkindex.dat' }filename112,3406
+sub indexed_object() { 'Bitcoin::Block::Index' }indexed_object113,3440
+package Bitcoin::Block;Bitcoin::Block115,3490
+sub load {load116,3514
 
-Bitcoin/Wallet.pm,46
-package Bitcoin::Wallet;Bitcoin::Wallet2,16
+Bitcoin/Electrum/Client.pm,148
+package Bitcoin::Electrum::Client;Bitcoin::Electrum::Client9,229
+sub raw_tx {raw_tx28,525
+sub mktx {mktx79,1859
+sub request {request86,1955
 
-Bitcoin/Protocol.pm,185
-package Bitcoin::Protocol;Bitcoin::Protocol2,16
-package Bitcoin::Network;Bitcoin::Network6,70
-package Bitcoin::Network::Address;Bitcoin::Network::Address8,97
-sub new {new10,145
-
-Bitcoin/template.pm,41
-package Bitcoin::NAMEBitcoin::NAME2,16
+Bitcoin/Electrum/Mnemonic.pm,124
+package Bitcoin::Electrum::Mnemonic;Bitcoin::Electrum::Mnemonic2,16
+sub encode {encode10,189
+sub decode {decode22,451
 
 Bitcoin/Electrum/Wallet.pm,480
 package Bitcoin::Electrum::Wallet;Bitcoin::Electrum::Wallet2,19
@@ -110,114 +125,123 @@ sub get_new_address {get_new_address116,3200
 Bitcoin/Electrum/Client/GUI/GTK.pm,86
 package Bitcoin::Electrum::Client::GUI::GTK;Bitcoin::Electrum::Client::GUI::GTK2,19
 
-Bitcoin/Electrum/Client/Interface.pm,354
-package Bitcoin::Electrum::Client::Interface;Bitcoin::Electrum::Client::Interface2,16
-package Bitcoin::Electrum::Client::Interface::Native;Bitcoin::Electrum::Client::Interface::Native12,251
-sub handler {handler14,358
-package Bitcoin::Electrum::Client::Interface::HTTP;Bitcoin::Electrum::Client::Interface::HTTP23,541
-sub handler {handler25,646
-
 Bitcoin/Electrum/Client/GUI.pm,76
 package Bitcoin::Electrum::Client::GUI;Bitcoin::Electrum::Client::GUI2,19
 
-Bitcoin/Electrum/Mnemonic.pm,124
-package Bitcoin::Electrum::Mnemonic;Bitcoin::Electrum::Mnemonic2,16
-sub encode {encode10,189
-sub decode {decode22,451
+Bitcoin/Block.pm,1768
+package Bitcoin::Block;Bitcoin::Block5,69
+sub depth { shift->{depth} }depth10,171
+sub work { shift->{work} }work11,200
+sub new {new12,227
+sub header { shift->{header} }header36,1080
+sub transactions { shift->{transactions} }transactions37,1111
+sub serialize {serialize38,1154
+sub get_hash { shift->header->get_hash }get_hash48,1489
+sub Merkle_tree {Merkle_tree50,1531
+sub update {update66,2057
+package Bitcoin::Block::Header;Bitcoin::Block::Header87,2690
+sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance91,2785
+sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class92,2883
+sub version		{ shift->_no_class->{version}        // die 'undefined version' }version94,2982
+sub hashPrev		{ shift->_no_class->{hashPrev}       // die 'undefined hashPrev' }hashPrev95,3061
+sub hashMerkleRoot	{ shift->_no_class->{hashMerkleRoot} // die 'undefined hashMerkleRoot' }hashMerkleRoot96,3142
+sub nTime		{ shift->_no_class->{nTime}          // die 'undefined nTime' }nTime97,3234
+sub nBits		{ shift->_no_class->{nBits}          // die 'undefined nBits' }nBits98,3309
+sub nNonce		{ shift->_no_class->{nNonce}         // die 'undefined nNonce' }nNonce99,3384
+sub new {new101,3462
+sub copy {copy121,4108
+sub previous {previous126,4194
+sub serialize {serialize135,4397
+sub get_hash { my $this = shift->_no_class; Bitcoin::Digest::hash256_bin $this->serialize }get_hash141,4586
+sub get_hash_hex { my $this = shift->_no_class; unpack 'H*', reverse $this->get_hash }get_hash_hex142,4678
+sub target {target144,4766
+sub work { 256 - log(shift->target)/log(2) }work151,4965
+sub check_proof_of_work {check_proof_of_work152,5010
 
-Bitcoin/Electrum/Client.pm,148
-package Bitcoin::Electrum::Client;Bitcoin::Electrum::Client9,229
-sub raw_tx {raw_tx28,525
-sub mktx {mktx78,1831
-sub request {request84,1905
+Bitcoin/Digest.pm,482
+package Bitcoin::Digest;Bitcoin::Digest5,43
+sub hash256_bin { use Digest::SHA qw(sha256); sha256 sha256 shift }hash256_bin17,341
+sub hash160_bin {hash160_bin18,409
+sub hash160_hex { unpack 'H*', reverse hash160_bin shift }hash160_hex26,580
+sub hash256_hex { unpack 'H*', reverse hash256_bin shift }hash256_hex27,639
+    sub hash160_int { hex unpack 'H*', hash160_hex shift }hash160_int31,717
+    sub hash256_int { hex unpack 'H*', hash256_hex shift }hash256_int32,776
 
-Bitcoin/Database.pm,176
-package Bitcoin::Database;Bitcoin::Database2,16
-sub new {new18,511
-package Bitcoin::Disk::Index;Bitcoin::Disk::Index33,777
-sub new {new40,970
-	SEARCH: {SEARCH60,1678
+Bitcoin/Constants.pm,219
+package Bitcoin::Constants;Bitcoin::Constants1,0
+use constant DATA_DIR => $ENV{BITCOIN_DATA_DIR};DATA_DIR3,29
+use constant GENESIS => '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f';GENESIS4,78
 
-Bitcoin/CNames.pm,1046
-package Bitcoin::CNames;Bitcoin::CNames2,16
-package CPrivKey;		our @ISA = qw(Bitcoin::Key::Private);CPrivKey5,113
-package CSecret;		our @ISA = qw(Bitcoin::Key::Secret);CSecret6,170
-package CMasterKey;		our @ISA = qw(Bitcoin::Key::MasterKey);CMasterKey7,225
-package CBase58Data;		our @ISA = qw(Bitcoin::Base58::Data);CBase58Data10,312
-package CBitcoinAddress;	our @ISA = qw(Bitcoin::Address);CBitcoinAddress13,399
-package CWallet;		our @ISA = qw(Bitcoin::Wallet);CWallet16,483
-package CKeyStore;		our @ISA = qw(Bitcoin::KeyStore);CKeyStore19,561
-package CBasicKeyStore;		our @ISA = qw(Bitcoin::KeyStore::Basic);CBasicKeyStore20,615
-package CCryptoKeyStore;	our @ISA = qw(Bitcoin::KeyStore::Encrypted);CCryptoKeyStore21,681
-package CBlock;			our @ISA = qw(Bitcoin::Block);CBlock24,776
-package CBlockIndex;		our @ISA = qw(Bitcoin::Block::Index);CBlockIndex25,825
-package CBlockLocator;		our @ISA = qw(Bitcoin::Block::Locator);CBlockLocator26,885
-package CAddress;		our @ISA = qw(Bitcoin::Network::Address);CAddress29,977
+Bitcoin/Base58.pm,770
+package Bitcoin::Base58;Bitcoin::Base587,106
+    sub decode { shift =~ m/$b58\Z/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }decode28,527
+    sub encode { my $_ = shift; return $_ < 58 ? $b58[$_] : encode($_/58) . $b58[$_%58] } encode29,614
+package Bitcoin::Base58::Data;Bitcoin::Base58::Data33,788
+sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class55,1366
+sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance56,1464
+    sub value {value65,1666
+    sub data  {data71,1805
+    sub value_from_address {value_from_address78,2023
+    sub checksum {checksum84,2180
+    sub to_hex {to_hex93,2389
+    sub to_base58 {to_base58101,2539
 
-Bitcoin/Transaction.pm,946
+Bitcoin/Transaction.pm,577
 package Bitcoin::Transaction;Bitcoin::Transaction2,16
-sub new {new16,208
-sub serialize {serialize61,1797
-sub copy {copy81,2899
-sub verify {verify87,3025
-sub strip_sig {strip_sig100,3363
-sub unbless {unbless111,3693
-sub get_hash {get_hash129,4165
-sub get_hash_hex { unpack 'H*', reverse shift->get_hash }get_hash_hex134,4275
-sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance136,4334
-sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class137,4432
-package Bitcoin::Disk::Tx::Pos;Bitcoin::Disk::Tx::Pos139,4531
-sub new {new140,4563
-package Bitcoin::Tx::Index;   # aka CTxIndexBitcoin::Tx::Index154,4924
-sub new {new156,4970
-package Bitcoin::Disk::Tx::Index;Bitcoin::Disk::Tx::Index174,5563
-sub prefix()         { 'tx' }prefix176,5634
-sub indexed_object() { 'Bitcoin::Tx::Index' }indexed_object177,5664
+sub new {new15,195
+sub serialize {serialize45,1200
+sub copy {copy65,2302
+sub verify {verify71,2428
+sub strip_sig {strip_sig87,2888
+sub unbless {unbless98,3218
+sub get_hash {get_hash116,3690
+sub get_hash_hex { unpack 'H*', reverse shift->get_hash }get_hash_hex121,3823
+sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance123,3882
+sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class124,3980
 
-Bitcoin/Key.pm,846
-package Bitcoin::Key;Bitcoin::Key2,16
-package Bitcoin::Key::Master;Bitcoin::Key::Master12,156
-sub twofish {twofish32,881
-package Bitcoin::Key::Private;Bitcoin::Key::Private38,1004
-package Bitcoin::Key::Secret;Bitcoin::Key::Secret41,1043
-sub size() { 256 }size51,1243
-sub default_version() { Bitcoin::TEST ? 129 : 128 }default_version52,1262
-sub new {new92,2086
-sub value {value103,2569
-sub encrypt {encrypt109,2711
-sub decrypt {decrypt117,2933
-sub public_point { EC::mult shift->_no_class->value, $EC::G }public_point126,3191
-sub public_key   { new EC::DSA::PublicKey $EC::G, shift->public_point }public_key127,3253
-sub address      { new Bitcoin::Address $_[0]->public_point, $_[1] }address128,3325
-sub _from_PEM {_from_PEM130,3395
-sub cipher {cipher139,3578
-sub sign {sign150,3861
-sub prompt {prompt156,4003
+Bitcoin/Util.pm,320
+package Bitcoin::Utils;Bitcoin::Utils2,16
+package Bitcoin::Util;Bitcoin::Util4,66
+    sub randInt {randInt29,361
+    sub atoi {atoi36,555
+    sub itoa {itoa44,710
+    sub itob {itob52,873
+    sub btoi {btoi60,1036
+    sub btoa { itoa btoi shift }btoa67,1142
+    sub atob { itob atoi shift }atob68,1175
 
-Bitcoin/Util.pm,275
-package Bitcoin::Util;Bitcoin::Util2,16
-    sub randInt {randInt24,246
-    sub atoi {atoi31,449
-    sub itoa {itoa39,604
-    sub itob {itob47,767
-    sub btoi {btoi55,930
-    sub btoa { itoa btoi shift }btoa62,1036
-    sub atob { itob atoi shift }atob63,1069
+Bitcoin/Database.pm,49
+package Bitcoin::Database;Bitcoin::Database1,0
 
-Bitcoin/Base58.pm,894
-package Bitcoin::Base58;Bitcoin::Base583,58
-    sub decode { shift =~ m/$b58\Z/p ? $b58{${^MATCH}} + 58*decode(${^PREMATCH}) : 0 }decode23,370
-    sub encode { my $_ = shift; return encode($_/58) . (Bitcoin::BASE58)[$_%58] if $_ > 0 } encode24,457
-package Bitcoin::Base58::Data;Bitcoin::Base58::Data27,553
-sub _no_class    { my $_ = shift; die "class method call not implemented" unless ref; return $_ }_no_class46,1047
-sub _no_instance { my $_ = shift; die "instance method call not implemented" if ref;  return $_ }_no_instance47,1145
-sub value   { shift->_no_class->[0] }value53,1381
-sub version { my $_ = shift; $_->[1] // $_->default_version }version54,1419
-sub data    { pack 'H*', shift->_no_class->value->as_hex =~ s/0x//r }data56,1552
-    sub new {new62,1659
-    sub checksum {checksum84,2552
-    sub to_hex {to_hex91,2762
-    sub to_base58 {to_base5896,2919
+Bitcoin/KeyStore.pm,536
+package Bitcoin::KeyStore;  # aka CKeyStoreBitcoin::KeyStore2,19
+sub _no_class    { my $_ = shift; die 'class method call not implemented'    if ref     }_no_class10,171
+sub _no_instance { my $_ = shift; die 'instance method call not implemented' unless ref }_no_instance11,261
+package Bitcoin::KeyStore::Basic;  # aka CBasicKeyStoreBitcoin::KeyStore::Basic20,501
+sub add_key {add_key23,592
+sub have_key {have_key29,794
+sub get_key {get_key36,969
+package Bitcoin::KeyStore::Encrypted;Bitcoin::KeyStore::Encrypted44,1143
+
+Bitcoin/Script.pm,1014
+package Bitcoin::Script;Bitcoin::Script2,16
+sub new {new12,205
+sub code {code28,766
+sub unbless { [ map $_->unbless, @{shift()} ] }unbless33,896
+package Bitcoin::Script::Atom;Bitcoin::Script::Atom35,945
+sub new {new43,1176
+sub code { my $_ = shift; $_->{code} // sprintf '%2x', ${'Bitcoin::Script::Codes::'.$_->{op_code}}->[0] }code51,1446
+sub _length { my $_ = shift; length($_->code) / 2 }_length52,1552
+sub unbless { +{ %{shift()} } }unbless53,1604
+package Bitcoin::Script::OP;Bitcoin::Script::OP55,1637
+sub new {new58,1746
+package Bitcoin::Script::PushData;Bitcoin::Script::PushData66,1974
+sub data { my $this = shift; substr pack('H*', $this->{code}), $this->{offset} }data72,2162
+sub new {new73,2243
+package Bitcoin::Script::PushData::ASCII;Bitcoin::Script::PushData::ASCII107,3282
+sub data { shift->{text} }data109,3366
+package Bitcoin::Script::PushData::PublicKey;Bitcoin::Script::PushData::PublicKey111,3394
+sub data { substr pack('H*', shift->{code}), 1 }data113,3482
 
 Bitcoin/Script/Codes.pm,60
 package Bitcoin::Script::Codes;Bitcoin::Script::Codes2,16
@@ -235,71 +259,23 @@ sub Tuck                { check_size 2; splice @S, -2, 0, $S[$#S] }Tuck23,592
 sub Rot                 { check_size 3; push @S, splice @S, -3, 1 }Rot24,660
 sub Swap                { check_size 2; push @S, splice @S, -2, 1 }Swap25,728
 
-Bitcoin/KeyStore.pm,238
-package Bitcoin::KeyStore;Bitcoin::KeyStore2,19
-sub STORE {STORE9,135
-sub add {add18,493
-package Bitcoin::KeyStore::Basic; 		Bitcoin::KeyStore::Basic25,673
-package Bitcoin::KeyStore::Encrypted;Bitcoin::KeyStore::Encrypted29,832
+EC/DSA.pm,640
+package EC::DSA;EC::DSA6,55
+sub import { EC::import(@_) }import10,127
+package EC::DSA::PublicKey;EC::DSA::PublicKey12,158
+sub verify {verify18,314
+sub serialize { serialize29,706
+package EC::DSA::PublicKey::UnCompressed;EC::DSA::PublicKey::UnCompressed34,808
+sub serialize { serialize36,885
+sub compress {compress41,1030
+package EC::DSA::PublicKey::Compressed;EC::DSA::PublicKey::Compressed46,1142
+sub serialize { serialize48,1217
+package EC::DSA::PrivateKey;EC::DSA::PrivateKey54,1376
+sub sign {sign61,1496
+sub public_key {public_key75,1989
+sub random {random80,2147
+package EC::DSA::ASN;EC::DSA::ASN106,2873
 
-Bitcoin.pm,640
-package Bitcoin;Bitcoin2,19
-use constant TEST	=> 0;TEST7,98
-use constant BASE58	=> qw{BASE588,122
-use constant CREDITS	=> 'Satoshi Nakamoto', 'Gavin Andersen', 'bitcoin developpers';CREDITS32,914
-use constant IRC	=> 'irc.lfnet.org', '6667', '#bitcoin'. (TEST ? 'TEST' : '');IRC33,999
-use constant CHECKPOINTS => {CHECKPOINTS35,1079
-sub hash160 {hash16047,1842
-sub hash160_hex { unpack 'H*', hash160 @_ }hash160_hex54,2008
-    sub hash     { sha256 sha256 shift }hash61,2125
-    sub hash_hex { unpack 'H*', reverse hash shift }hash_hex62,2166
-    sub hash_int { use bigint; hex unpack 'H*', hash shift }hash_int63,2219
-
-PadWalker.pm,33
-package PadWalker;PadWalker1,0
-
-EC.pm,706
-package EC::Curves;EC::Curves4,55
-use constant secp256k1 => {secp256k110,168
-package EC;EC22,725
-sub import {import37,897
-    sub Delta { -16*(4*$a**3 + 27*$b**2) }Delta59,1553
-    sub check {check60,1596
-    sub Cmp {Cmp68,1923
-    sub double {double72,2053
-    sub add {add79,2290
-    sub mult {mult90,2720
-package EC::Point;EC::Point108,3179
-package Math::BigInt;Math::BigInt121,3480
-package EC::DSA::PublicKey;EC::DSA::PublicKey128,3647
-sub new {new133,3777
-sub verify {verify140,4115
-package EC::DSA::PrivateKey;EC::DSA::PrivateKey153,4560
-sub new {new158,4629
-sub sign {sign165,4972
-sub public_key {public_key182,5588
-package EC::DSA::ASN;EC::DSA::ASN188,5746
-
-File/Map.pm,304
-package File::Map;File::Map1,0
-sub _check_layers {_check_layers55,1498
-sub _get_offset_length {_get_offset_length64,1748
-sub map_handle {map_handle77,2080
-sub map_file {map_file86,2391
-sub map_anonymous {map_anonymous104,3059
-sub sys_map {    ## no critic (ProhibitManyArgs)sys_map113,3391
-
-PerlIO/Layers.pm,272
-package PerlIO::Layers;PerlIO::Layers9,242
-sub _names_to_flags {_names_to_flags29,622
-sub _flag_names {_flag_names33,700
-sub _has_flags {_has_flags38,803
-sub _is_kind {_is_kind53,1170
-sub query_handle {query_handle110,2815
-sub get_layers {get_layers116,3002
-
-NumberTheory.pm,147
-package NumberTheory;NumberTheory2,16
-use constant DC_REGISTERS => 'DC_REGISTERS13,190
-sub dc {dc28,435
-sub inverse_mod {inverse_mod37,622
+EC/Curves.pm,78
+package EC::Curves;EC::Curves1,0
+use constant secp256k1 => {secp256k15,87

@@ -1,14 +1,15 @@
 #!/usr/bin/perl
-package Bitcoin::DataStream;
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(CHAR UCHAR BYTE INT16 UINT16 INT32 UINT32 INT64 UINT64 STRING);
-%EXPORT_TAGS = ( types => [ @EXPORT_OK ] );
 use v5.14;
 use strict;
 use warnings;
 
-# data types
+package Bitcoin::DataStream;
+require Exporter;
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw(CHAR UCHAR BYTE INT16 UINT16 INT32 UINT32 INT64 UINT64 STRING);
+our %EXPORT_TAGS = ( types => [ @EXPORT_OK ] );
+
+# data types can be exported using the :types tag
 use constant {
     BYTE	=> 'a',
     CHAR	=> 'c',
@@ -199,7 +200,7 @@ Bitcoin::DataStream
 
 =head1 SYNOPSIS
 
-    use Bitcoin::DataStream qw( :types );
+    use Bitcoin::DataStream;
 
     $ds = new Bitcoin::DataStream;
     $ds->Write(STRING, "foo");

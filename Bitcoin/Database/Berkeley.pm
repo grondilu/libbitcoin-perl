@@ -20,7 +20,7 @@ sub new {
 	-Filename => Bitcoin::Constants::DATA_DIR . "/$filename",
 	-Subname  => $subname,
 	-Flags    => DB_THREAD| DB_RDONLY,
-	    or die "could not tie $filename: $!";
+	    or die "could not open $filename: $!";
     }
     else {...}
 }

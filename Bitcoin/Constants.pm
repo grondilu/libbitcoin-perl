@@ -1,18 +1,21 @@
 package Bitcoin::Constants;
 
+BEGIN {
+    $ENV{BITCOIN_TEST} //= 'yes';
+    $ENV{BITCOIN_MAGIC} //= 'yes';
+}
+
 use constant {
     
-    THIS_IS_TEST => $ENV{BITCOIN_TEST} //= 'yes' ? 1 : 0,
+    THIS_IS_TEST => lc $ENV{BITCOIN_TEST} ~~ [ qw( yes 1 true ) ] ? 1 : 0,
+    MAGIC        => lc $ENV{BITCOIN_MAGIC} ~~ [ qw( yes 1 true ) ] ? 1 : 0,
     
-    MAGIC        => $ENV{BITCOIN_MAGIC} //= 'yes' ? 1 : 0,
-    
-    DATA_DIR     => $ENV{BITCOIN_DATA_DIR} //=
-    
-    $ENV{HOME} . THIS_IS_TEST ? "/.bitcoin-test" : "/.bitcoin",
+    DATA_DIR     => $ENV{BITCOIN_DATA_DIR} //= $ENV{HOME} .
+    (THIS_IS_TEST ? "/.bitcoin/testnet" : "/.bitcoin"),
     
     GENESIS => THIS_IS_TEST ?
-    '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f' :
-    '00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008',
+    '00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008' :
+    '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f',
     
     MESSAGE_START => THIS_IS_TEST ? 0xDAB5BFFA : 0xD9B4BEF9,
 
@@ -36,7 +39,8 @@ use constant {
 };
 
 CHECK { DATA_DIR or die "undefined data dir" }
-CHECK { -d DATA_DIR or die DATA_DIR . " does not exist. Exiting" }
-CHECK { -x DATA_DIR or die DATA_DIR . " is not writable.  Exiting" }
+CHECK { -d DATA_DIR and -x DATA_DIR
+	or die DATA_DIR . " does not exist or is not writable. Exiting"
+}
 
 1;

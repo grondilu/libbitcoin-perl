@@ -156,7 +156,9 @@ sub check_proof_of_work {
 	use bigint;
 	my ($hash_hex, $nBits) = @_;
 	my $target = $_->target($nBits);
-	die "target doesn't provide minimum work" if $target > 2**(256 - 32) - 1;
+	unless (Bitcoin::Constants::THIS_IS_TEST) {
+	    die "target ($target) doesn't provide minimum work" if $target > 2**(256 - 32) - 1;
+	}
 	die "hash doesn't match nBits" if $target < hex $hash_hex;
     }
 }

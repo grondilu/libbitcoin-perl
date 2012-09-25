@@ -1,6 +1,4 @@
 #!/usr/bin/perl
-package Bitcoin::Utils;
-@ISA = qw(Bitcoin::Util);
 package Bitcoin::Util;
 require Exporter;
 @ISA = qw(Exporter);
@@ -68,6 +66,15 @@ sub btoi;
     sub atob { itob atoi shift }
 
 }
+
+sub what_is_my_ip {
+    use LWP::Simple;
+    get(
+	'http://duckduckgo.com/?q=what+is+my+ip'
+    ) =~ /Your IP address is (\d+)\.(\d+)\.(\d+)\.(\d+) /; #(\d+\.\d+\.\d+\.\d+)/;
+    return $1, $2, $3, $4;
+}
+
 1;
 
 __END__
