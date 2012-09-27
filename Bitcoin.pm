@@ -15,9 +15,7 @@ sub import {
 
     import bigint;
     use overload;
-    unless( ':nomagic' ~~ [ @_ ]
-	    or not Bitcoin::Constants::MAGIC
-    ) {
+    unless( ':nomagic' ~~ [ @_ ] or not Bitcoin::Constants::MAGIC) {
 	# This allows magical recognition of bitcoin addresses or keys in
 	# string literals.
 	overload::constant q => sub {
@@ -43,7 +41,7 @@ our @ISA = qw(
     EC::DSA::PrivateKey
 );
 sub size() { 256 }
-sub version() { $ENV{BITCOIN_TEST} ~~ /yes|true/i ? 129 : 128 }
+sub version() { Bitcoin::Constants::THIS_IS_TEST ? 239 : 128 }
 sub value { bless shift->copy(), 'Math::BigInt'; }
 sub address { new Bitcoin::Address shift->public_key }
 
@@ -67,7 +65,7 @@ sub new {
 package Bitcoin::Address;
 our @ISA = qw(Bitcoin::Base58::Data);
 sub size() { 160 }
-sub version() { $ENV{BITCOIN_TEST} ~~ /yes|true/i ? 1 : 0 }
+sub version() { Bitcoin::Constants::THIS_IS_TEST ? 111 : 0 }
 sub data {
     my $this = shift;
     ref $this ? $this->{data} : $this->SUPER::data(@_);

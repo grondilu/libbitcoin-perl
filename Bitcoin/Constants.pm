@@ -30,6 +30,8 @@ use constant {
 	)
     ],
 
+    DEFAULT_PORT => THIS_IS_TEST ? 18333 : 8333,
+
     IRC => {
 	SERVER => 'irc.lfnet.org',
 	PORT => 6667,

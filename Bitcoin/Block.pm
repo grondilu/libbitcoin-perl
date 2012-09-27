@@ -5,7 +5,11 @@ require Bitcoin::Constants;
 package Bitcoin::Block;
 use strict;
 use warnings;
-use overload '""' => sub { use YAML; Dump shift };
+use overload '""' => sub {
+    use YAML;
+    use MIME::QuotedPrint;
+    encode_qp Dump(shift), "\015\012";
+};
 
 sub depth { shift->{depth} }
 sub work { shift->{work} }
