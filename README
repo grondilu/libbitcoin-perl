@@ -11,4 +11,8 @@ Can optionaly use dc, the unix desktop calculator, as it is much faster than Mat
 
 Requires also: BerkeleyDB, Convert::ASN1, File::Map
 
-THIS IS WORK IN PROGRESS, PROVIDED WITH ABSOLUTELY NO GUARANTEE WHATSOEVER
+NB.  This software is (as of feb 2015), no more supported nor developed.
+It is left public only in case someone wants to re-use parts of its code.
+
+THIS SOFTWARE IS PROVIDED AS IS WITH ABSOLUTELY NO GUARANTEE WHATSOEVER
+
