@@ -19,7 +19,7 @@ sub import {
 	# This allows magical recognition of bitcoin addresses or keys in
 	# string literals.
 	overload::constant q => sub {
-	    my $s = shift;
+	    my ($s, $perl_s) = @_;
 	    if($s =~ /\A$Bitcoin::Base58::b58 {20,}\z/x) {
 		my ($Base58Data, @error);
 		$Base58Data = eval { new Bitcoin::Key $s };
@@ -30,7 +30,7 @@ sub import {
 		return $Base58Data unless $@;
 		warn "could not convert $s into a bitcoin address or key";
 	    }
-	    return $s;
+	    return $perl_s;
 	};
     }
 }
