@@ -80,7 +80,7 @@ sub public_key {
 sub random {
     my $this = shift;
     my $i = 0;
-    $i = 256*$i + int rand 256 for 1..32;
+    $i = 256*$i + int Bitcoin::Util::randInt(256) for 1..32;
     $this->new($i);
 }
 
