@@ -2,7 +2,7 @@ package Bitcoin::Constants;
 
 BEGIN {
     $ENV{BITCOIN_TEST} //= 'yes';
-    $ENV{BITCOIN_MAGIC} //= 'yes';
+    $ENV{BITCOIN_MAGIC} //= 'no';  # disabling magic
 }
 
 use constant {
